@@ -1,4 +1,5 @@
--- 1. Setup Extensions & Schema Objects (Admin / Postgres User)
+-- Setup Extensions & Schema Objects (Admin / Postgres User)
+-- Note: Run this script after creating the standbase_QA database
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS users (
@@ -45,7 +46,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO standbase_app;
 
 -- 4. Assign Database and Schema Level Entry
-GRANT CONNECT ON DATABASE standbase TO standbase_app;
+GRANT CONNECT ON DATABASE standbase_QA TO standbase_app;
 GRANT USAGE ON SCHEMA public TO standbase_app;
 
 -- 5. Hard-Lock Security (Explicitly prevent app user from changing schema structures)
