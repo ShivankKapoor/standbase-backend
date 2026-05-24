@@ -1,12 +1,16 @@
 package com.shivankkapoor.standbase.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class IpService {
+    private static final Logger log = LoggerFactory.getLogger(IpService.class);
+
     public String getClientIp(HttpServletRequest request) {
         String[] headers = {
                 "CF-Connecting-IP",
@@ -22,10 +26,14 @@ public class IpService {
             }
             String ip = value.split(",")[0].trim();
             if (isValid(ip)) {
+                log.debug("Resolved client IP {} from header {}", ip, header);
                 return ip;
             }
+            log.debug("Header {} present but value '{}' failed validation", header, value);
         }
-        return request.getRemoteAddr();
+        String fallback = request.getRemoteAddr();
+        log.debug("No valid proxy header found, falling back to remote address {}", fallback);
+        return fallback;
     }
 
     private boolean isValid(String ip) {
