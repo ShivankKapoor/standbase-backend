@@ -51,8 +51,10 @@ public class IpService {
             if (parts.length >= 2) {
                 try {
                     int second = Integer.parseInt(parts[1]);
-                    if (second >= 16 && second <= 31) return false;
-                } catch (NumberFormatException ignored) {}
+                    if (second >= 16 && second <= 31)
+                        return false;
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
         return true;
