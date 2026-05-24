@@ -36,5 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 
-### Sensitve ###
+### Sensitive ###
 .env
+CLAUDE.md
