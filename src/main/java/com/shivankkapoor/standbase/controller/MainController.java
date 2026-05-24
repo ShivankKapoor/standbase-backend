@@ -10,14 +10,14 @@ import java.util.Map;
 @RestController
 public class MainController {
     @GetMapping("/")
-    ResponseEntity<Map<String, String>> home(){
+    ResponseEntity<Map<String, String>> home() {
         Map<String, String> resp = new LinkedHashMap<>();
-           resp.put("name", "Standbase-Backend");
-            resp.put("status", "Up");
-            resp.put("platform", "Java");
-            resp.put("version",System.getProperty("java.version"));
-            resp.put("vendor",System.getProperty("java.vendor"));
-        
+        resp.put("name", "Standbase-Backend");
+        resp.put("status", "Up");
+        resp.put("platform", "Java");
+        resp.put("version", System.getProperty("java.version"));
+        resp.put("vendor", System.getProperty("java.vendor"));
+
         return ResponseEntity.ok(resp);
     }
 }
