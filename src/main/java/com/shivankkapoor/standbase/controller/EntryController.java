@@ -1,7 +1,10 @@
 package com.shivankkapoor.standbase.controller;
 
+import com.shivankkapoor.standbase.dto.request.CreateEntryRequestDTO;
+import com.shivankkapoor.standbase.dto.request.ResponseDTO;
 import com.shivankkapoor.standbase.model.Entry;
 import com.shivankkapoor.standbase.service.EntryService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +28,13 @@ public class EntryController {
         UUID userId = (UUID) authentication.getPrincipal();
         Optional<Entry> entry = entryService.findByUserIdAndEntryDate(userId, date);
         return entry.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("")
+    public ResponseEntity<?> createEntry(@Valid @RequestBody CreateEntryRequestDTO createEntryRequestDTO){
+        ResponseDTO response = new ResponseDTO();
+        response.setStatus("ok");
+        return ResponseEntity.ok(response);
     }
 
 }
