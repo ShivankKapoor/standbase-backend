@@ -8,6 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -35,6 +36,12 @@ public class AuthService {
             return null;
         }
         return sessionService.createSession(user.getId(), ip);
+    }
+
+    public String getUsernameById(UUID userId) {
+        return userRepository.findById(userId)
+                .map(User::getUsername)
+                .orElse(null);
     }
 
     public void logout(String sessionToken) {
