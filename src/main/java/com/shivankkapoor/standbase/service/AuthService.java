@@ -15,15 +15,11 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
-    private final AuthService authService;
-
     private final SessionService sessionService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthService authService, SessionService sessionService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, SessionService sessionService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.authService = authService;
         this.sessionService = sessionService;
     }
 
@@ -34,14 +30,14 @@ public class AuthService {
             return null;
         }
         User user = attemptedUser.get();
-        if (!passwordEncoder.matches(password, user.password())) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             log.warn("Invalid password attempt for user {}", username);
             return null;
         }
-        return sessionService.createSession(user.id(), ip);
+        return sessionService.createSession(user.getId(), ip);
     }
 
     public void logout(String sessionToken) {
-        authService.logout(sessionToken);
+        sessionService.logout(sessionToken);
     }
 }

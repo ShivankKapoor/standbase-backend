@@ -1,30 +1,32 @@
 package com.shivankkapoor.standbase.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "entries")
-public record Entry(
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Entry {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    UUID id,
+    private UUID id;
     @Column(name = "user_id")
-    UUID userId,
+    private UUID userId;
     @Column(name = "entry_date")
-    LocalDate entryDate,
+    private LocalDate entryDate;
     @Column(name = "day_type")
-    String dayType,
-    String content,
+    private String dayType;
+    private String content;
     @Column(name = "created_at")
-    OffsetDateTime createdAt,
+    private OffsetDateTime createdAt;
     @Column(name = "updated_at")
-    OffsetDateTime updatedAt
-) {}
+    private OffsetDateTime updatedAt;
+}

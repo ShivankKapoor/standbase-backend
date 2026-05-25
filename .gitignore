@@ -36,6 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 
+### Python ###
+.venv/
+
 ### Sensitive ###
 .env
 CLAUDE.md
