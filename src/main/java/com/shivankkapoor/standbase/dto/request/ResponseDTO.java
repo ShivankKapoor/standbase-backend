@@ -1,4 +1,4 @@
-package com.shivankkapoor.standbase.dto;
+package com.shivankkapoor.standbase.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

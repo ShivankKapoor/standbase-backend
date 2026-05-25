@@ -1,7 +1,7 @@
 package com.shivankkapoor.standbase.controller;
 
-import com.shivankkapoor.standbase.dto.CheckResponseDTO;
-import com.shivankkapoor.standbase.dto.ResponseDTO;
+import com.shivankkapoor.standbase.dto.response.CheckResponseDTO;
+import com.shivankkapoor.standbase.dto.request.ResponseDTO;
 import com.shivankkapoor.standbase.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;

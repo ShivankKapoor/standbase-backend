@@ -1,7 +1,7 @@
 package com.shivankkapoor.standbase.controller;
 
-import com.shivankkapoor.standbase.dto.LoginRequestDTO;
-import com.shivankkapoor.standbase.dto.LoginResponseDTO;
+import com.shivankkapoor.standbase.dto.request.LoginRequestDTO;
+import com.shivankkapoor.standbase.dto.response.LoginResponseDTO;
 import com.shivankkapoor.standbase.service.AuthService;
 import com.shivankkapoor.standbase.service.IpService;
 import jakarta.servlet.http.HttpServletRequest;
