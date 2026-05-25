@@ -19,6 +19,7 @@ public class SessionService {
     }
 
     private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, String> reverseSessionLookup = new ConcurrentHashMap<>();
     private final SecureRandom secureRandom = new SecureRandom();
 
     private String generateToken() {
@@ -29,10 +30,12 @@ public class SessionService {
 
     public String createSession(UUID userId, String ip) {
         log.info("Create session request for user {}", userId);
+        invalidateSessions(userId);
         Instant expireTime = Instant.now().plus(30, ChronoUnit.MINUTES);
         Session val = new Session(userId, ip, expireTime);
         String userToken = generateToken();
         sessions.put(userToken, val);
+        reverseSessionLookup.put(userId, userToken);
         return userToken;
     }
 
@@ -68,6 +71,16 @@ public class SessionService {
             log.warn("Logout request for non-existent session");
             return;
         }
+        reverseSessionLookup.remove(session.userId());
         log.info("Session logged out for user {}", session.userId());
+    }
+
+    private void invalidateSessions(UUID userId){
+        String prevSessionToken = reverseSessionLookup.get(userId);
+        if(prevSessionToken==null){
+            log.info("No previous session for {}",userId);
+        }else{
+            logout(prevSessionToken);
+        }
     }
 }
