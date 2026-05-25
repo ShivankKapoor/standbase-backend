@@ -75,6 +75,15 @@ public class SessionService {
         log.info("Session logged out for user {}", session.userId());
     }
 
+    public void logoutByUserId(UUID userId) {
+        String sessionToken = reverseSessionLookup.get(userId);
+        if (sessionToken == null) {
+            log.warn("Logout request for non-existent session for user {}", userId);
+            return;
+        }
+        logout(sessionToken);
+    }
+
     private void invalidateSessions(UUID userId){
         String prevSessionToken = reverseSessionLookup.get(userId);
         if(prevSessionToken==null){

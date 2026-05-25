@@ -47,4 +47,8 @@ public class AuthService {
     public void logout(String sessionToken) {
         sessionService.logout(sessionToken);
     }
+
+    public void logoutByUserId(UUID userId) {
+        sessionService.logoutByUserId(userId);
+    }
 }
