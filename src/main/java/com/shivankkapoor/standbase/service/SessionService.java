@@ -80,6 +80,7 @@ public class SessionService {
         if(prevSessionToken==null){
             log.info("No previous session for {}",userId);
         }else{
+            log.info("Invalidating previous session {}",prevSessionToken);
             logout(prevSessionToken);
         }
     }
