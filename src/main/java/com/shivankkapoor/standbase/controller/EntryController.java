@@ -31,7 +31,7 @@ public class EntryController {
     }
 
     @PostMapping("")
-    public ResponseEntity<?> createEntry(@Valid @RequestBody CreateEntryRequestDTO createEntryRequestDTO){
+    public ResponseEntity<ResponseDTO> createEntry(@Valid @RequestBody CreateEntryRequestDTO createEntryRequestDTO){
         ResponseDTO response = new ResponseDTO();
         response.setStatus("ok");
         return ResponseEntity.ok(response);
