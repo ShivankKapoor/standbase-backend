@@ -1,5 +1,6 @@
 package com.shivankkapoor.standbase.controller;
 
+import com.shivankkapoor.standbase.dto.CheckResponseDTO;
 import com.shivankkapoor.standbase.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,10 +22,12 @@ public class SessionController {
     }
 
     @GetMapping("/check")
-    public ResponseEntity<Map<String, String>> check(Authentication authentication) {
+    public ResponseEntity<CheckResponseDTO> check(Authentication authentication) {
         UUID userId = (UUID) authentication.getPrincipal();
-        String username = authService.getUsernameById(userId);
-        return ResponseEntity.ok(Map.of("username", username));
+        CheckResponseDTO resp = new CheckResponseDTO();
+        resp.setUserName(authService.getUsernameById(userId));
+        resp.setStatus("ok");
+        return ResponseEntity.ok(resp);
     }
 
 }
