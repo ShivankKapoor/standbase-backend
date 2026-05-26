@@ -1,7 +1,6 @@
 package com.shivankkapoor.standbase.controller;
 
 import com.shivankkapoor.standbase.dto.request.CreateEntryRequestDTO;
-import com.shivankkapoor.standbase.dto.request.ResponseDTO;
 import com.shivankkapoor.standbase.dto.response.CreateEntryResponseDTO;
 import com.shivankkapoor.standbase.model.DayType;
 import com.shivankkapoor.standbase.model.Entry;

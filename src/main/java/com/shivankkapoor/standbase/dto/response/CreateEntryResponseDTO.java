@@ -1,6 +1,5 @@
 package com.shivankkapoor.standbase.dto.response;
 
-import com.shivankkapoor.standbase.dto.request.ResponseDTO;
 import com.shivankkapoor.standbase.model.DayType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
