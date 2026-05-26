@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS entries (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL REFERENCES users(id),
     entry_date   DATE NOT NULL,
-    day_type     TEXT CHECK (day_type IN ('PTO', 'Planning', 'Support')),
+    day_type     TEXT CHECK (day_type IN ('PTO', 'PLANNING', 'SUPPORT')),
     content      TEXT,
     search_vector TSVECTOR,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),

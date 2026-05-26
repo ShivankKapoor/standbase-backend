@@ -1,5 +1,6 @@
 package com.shivankkapoor.standbase.service;
 
+import com.shivankkapoor.standbase.dto.request.CreateEntryRequestDTO;
 import com.shivankkapoor.standbase.model.Entry;
 import com.shivankkapoor.standbase.repository.EntryRepository;
 import org.slf4j.Logger;
@@ -7,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +28,29 @@ public class EntryService {
             log.error("Error fetching entry for userId={} date={}", userId, date, e);
             return Optional.empty();
         }
+    }
+
+    public boolean deleteEntry(UUID userId, LocalDate date) {
+        if (entryRepository.findByUserIdAndEntryDate(userId, date).isEmpty()) {
+            return false;
+        }
+        entryRepository.deleteByUserIdAndEntryDate(userId, date);
+        return true;
+    }
+
+    public Entry createEntry(UUID userId, CreateEntryRequestDTO dto) {
+        Entry entry = entryRepository.findByUserIdAndEntryDate(userId, dto.getDate())
+                .orElseGet(() -> {
+                    Entry e = new Entry();
+                    e.setUserId(userId);
+                    e.setEntryDate(dto.getDate());
+                    e.setCreatedAt(OffsetDateTime.now());
+                    return e;
+                });
+        entry.setDayType(dto.getDayType() != null ? dto.getDayType().name() : null);
+        entry.setContent(dto.getContent());
+        entry.setUpdatedAt(OffsetDateTime.now());
+        return entryRepository.save(entry);
     }
 
 }
