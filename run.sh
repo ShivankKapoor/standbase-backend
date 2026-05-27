@@ -28,7 +28,7 @@ podman run -d \
   --name "$CONTAINER_NAME" \
   --env-file "$ENV_FILE" \
   -v "$ENV_FILE:/deployments/.env:ro,Z" \
-  -p 5554:8080 \
+  -p 5554:5554 \
   "$IMAGE_NAME"
 
 mkdir -p "$LOGS_DIR"
