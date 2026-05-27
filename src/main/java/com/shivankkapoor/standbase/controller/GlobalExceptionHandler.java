@@ -32,7 +32,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> handleNotReadable(HttpMessageNotReadableException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error", "Invalid request body: " + ex.getMostSpecificCause().getMessage()));
+        log.debug("Unreadable request body", ex);
+        return ResponseEntity.badRequest().body(Map.of("error", "Invalid request body"));
     }
 
     @ExceptionHandler(Exception.class)
