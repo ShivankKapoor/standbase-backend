@@ -1,5 +1,6 @@
 package com.shivankkapoor.standbase.controller;
 
+import com.shivankkapoor.standbase.service.HealthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,11 @@ import java.util.Map;
 @RestController
 public class MainController {
     private static final Logger log = LoggerFactory.getLogger(MainController.class);
+    private final HealthService healthService;
+
+    public MainController(HealthService healthService) {
+        this.healthService = healthService;
+    }
 
     @GetMapping("/")
     ResponseEntity<Map<String, String>> home() {
@@ -23,6 +29,15 @@ public class MainController {
         resp.put("version", System.getProperty("java.version"));
         resp.put("vendor", System.getProperty("java.vendor"));
 
+        return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/health")
+    ResponseEntity<Map<String, String>> health() {
+        boolean dbHealthy = healthService.isDbHealthy();
+        Map<String, String> resp = new LinkedHashMap<>();
+        resp.put("app", "Up");
+        resp.put("db", dbHealthy ? "Up" : "Down");
         return ResponseEntity.ok(resp);
     }
 }
