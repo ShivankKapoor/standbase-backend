@@ -36,7 +36,7 @@ public class AuthService {
     // Returns sessionToken normally, or null on failure.
     // Returns null with totpRequired=true signal via loginResult when TOTP is needed — use login() overload below.
     public LoginResult login(String username, String password, String ip) {
-        Optional<User> attemptedUser = userRepository.findByUsername(username);
+        Optional<User> attemptedUser = userRepository.findByUsername(username.toLowerCase());
         if (attemptedUser.isEmpty()) {
             log.warn("No user found for login request {}", username);
             return LoginResult.failure();
