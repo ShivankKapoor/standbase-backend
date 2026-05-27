@@ -3,8 +3,12 @@ package com.shivankkapoor.standbase.config;
 import com.shivankkapoor.standbase.filter.AuthRateLimitFilter;
 import com.shivankkapoor.standbase.filter.EntryRateLimitFilter;
 import com.shivankkapoor.standbase.filter.SessionAuthFilter;
+import com.shivankkapoor.standbase.service.IpService;
+import com.shivankkapoor.standbase.service.SessionService;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -19,20 +23,27 @@ import org.springframework.security.web.authentication.logout.LogoutFilter;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    private final SessionAuthFilter sessionAuthFilter;
-    private final AuthRateLimitFilter authRateLimitFilter;
-    private final EntryRateLimitFilter entryRateLimitFilter;
 
-    public SecurityConfig(SessionAuthFilter sessionAuthFilter,
-                          AuthRateLimitFilter authRateLimitFilter,
-                          EntryRateLimitFilter entryRateLimitFilter) {
-        this.sessionAuthFilter = sessionAuthFilter;
-        this.authRateLimitFilter = authRateLimitFilter;
-        this.entryRateLimitFilter = entryRateLimitFilter;
+    @Bean
+    public AuthRateLimitFilter authRateLimitFilter(IpService ipService) {
+        return new AuthRateLimitFilter(ipService);
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SessionAuthFilter sessionAuthFilter(SessionService sessionService, IpService ipService) {
+        return new SessionAuthFilter(sessionService, ipService);
+    }
+
+    @Bean
+    public EntryRateLimitFilter entryRateLimitFilter() {
+        return new EntryRateLimitFilter();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           AuthRateLimitFilter authRateLimitFilter,
+                                           SessionAuthFilter sessionAuthFilter,
+                                           EntryRateLimitFilter entryRateLimitFilter) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -42,11 +53,36 @@ public class SecurityConfig {
                 .requestMatchers("/", "/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, e) ->
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED))
+            )
             .addFilterBefore(authRateLimitFilter, LogoutFilter.class)
             .addFilterBefore(sessionAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(entryRateLimitFilter, AnonymousAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public FilterRegistrationBean<AuthRateLimitFilter> authRateLimitFilterRegistration(AuthRateLimitFilter filter) {
+        FilterRegistrationBean<AuthRateLimitFilter> reg = new FilterRegistrationBean<>(filter);
+        reg.setEnabled(false);
+        return reg;
+    }
+
+    @Bean
+    public FilterRegistrationBean<SessionAuthFilter> sessionAuthFilterRegistration(SessionAuthFilter filter) {
+        FilterRegistrationBean<SessionAuthFilter> reg = new FilterRegistrationBean<>(filter);
+        reg.setEnabled(false);
+        return reg;
+    }
+
+    @Bean
+    public FilterRegistrationBean<EntryRateLimitFilter> entryRateLimitFilterRegistration(EntryRateLimitFilter filter) {
+        FilterRegistrationBean<EntryRateLimitFilter> reg = new FilterRegistrationBean<>(filter);
+        reg.setEnabled(false);
+        return reg;
     }
 
     @Bean
