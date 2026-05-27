@@ -25,6 +25,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 	implementation("dev.samstevens.totp:totp:1.7.1")
+	implementation("com.bucket4j:bucket4j_jdk17-core:8.19.0")
+	implementation("com.github.ben-manes.caffeine:caffeine:3.2.0")
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
