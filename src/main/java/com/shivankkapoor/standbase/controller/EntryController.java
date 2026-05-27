@@ -2,6 +2,8 @@ package com.shivankkapoor.standbase.controller;
 
 import com.shivankkapoor.standbase.dto.request.CreateEntryRequestDTO;
 import com.shivankkapoor.standbase.dto.response.CreateEntryResponseDTO;
+import com.shivankkapoor.standbase.dto.response.EntryListResponseDTO;
+import com.shivankkapoor.standbase.dto.response.EntryOverviewResponseDTO;
 import com.shivankkapoor.standbase.model.DayType;
 import com.shivankkapoor.standbase.model.Entry;
 import com.shivankkapoor.standbase.service.EntryService;
@@ -13,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +28,19 @@ public class EntryController {
 
     public EntryController(EntryService entryService) {
         this.entryService = entryService;
+    }
+
+    @GetMapping("")
+    public ResponseEntity<EntryListResponseDTO> getEntries(
+            @RequestParam int year,
+            @RequestParam int month,
+            Authentication authentication) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        YearMonth ym = YearMonth.of(year, month);
+        EntryListResponseDTO response = new EntryListResponseDTO();
+        response.setStatus("ok");
+        response.setEntries(entryService.getEntries(userId, ym.atDay(1), ym.atEndOfMonth()));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{date}")
