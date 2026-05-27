@@ -8,6 +8,7 @@ import com.shivankkapoor.standbase.repository.EntryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -33,6 +34,7 @@ public class EntryService {
         }
     }
 
+    @Transactional
     public boolean deleteEntry(UUID userId, LocalDate date) {
         if (entryRepository.findByUserIdAndEntryDate(userId, date).isEmpty()) {
             return false;
