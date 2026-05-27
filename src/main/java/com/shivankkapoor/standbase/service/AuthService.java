@@ -30,7 +30,9 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.sessionService = sessionService;
         this.preAuthService = preAuthService;
-        this.codeVerifier = new DefaultCodeVerifier(new DefaultCodeGenerator(), new SystemTimeProvider());
+        DefaultCodeVerifier verifier = new DefaultCodeVerifier(new DefaultCodeGenerator(), new SystemTimeProvider());
+        verifier.setAllowedTimePeriodDiscrepancy(1);
+        this.codeVerifier = verifier;
     }
 
     // Returns sessionToken normally, or null on failure.
