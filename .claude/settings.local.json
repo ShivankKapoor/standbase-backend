@@ -4,7 +4,8 @@
       "Bash(cat)",
       "Read(//tmp/**)",
       "Bash(./gradlew test *)",
-      "WebFetch(domain:rieckpil.de)"
+      "WebFetch(domain:rieckpil.de)",
+      "Bash(xargs cat -n)"
     ]
   }
 }

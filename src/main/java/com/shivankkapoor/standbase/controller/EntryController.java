@@ -44,10 +44,17 @@ public class EntryController {
     }
 
     @GetMapping("/{date}")
-    public ResponseEntity<Entry> getEntry(@PathVariable LocalDate date, Authentication authentication) {
+    public ResponseEntity<CreateEntryResponseDTO> getEntry(@PathVariable LocalDate date, Authentication authentication) {
         UUID userId = (UUID) authentication.getPrincipal();
         Optional<Entry> entry = entryService.findByUserIdAndEntryDate(userId, date);
-        return entry.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return entry.map(e -> {
+            CreateEntryResponseDTO response = new CreateEntryResponseDTO();
+            response.setStatus("ok");
+            response.setDate(e.getEntryDate());
+            response.setDayType(e.getDayType() != null ? DayType.valueOf(e.getDayType()) : null);
+            response.setContent(e.getContent());
+            return ResponseEntity.ok(response);
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{date}")
