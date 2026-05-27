@@ -24,6 +24,7 @@ dependencies {
 	implementation("io.github.cdimascio:java-dotenv:3.1.6")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+	implementation("dev.samstevens.totp:totp:1.7.1")
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")

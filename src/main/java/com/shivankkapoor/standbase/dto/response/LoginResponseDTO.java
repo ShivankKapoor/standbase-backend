@@ -6,5 +6,6 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class LoginResponseDTO extends ResponseDTO {
-    String sessionToken;
+    private String sessionToken;
+    private String preAuthToken;
 }
