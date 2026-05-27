@@ -36,7 +36,7 @@ print("2. Add TOTP to existing user")
 mode = input("Select an option: ").strip()
 
 if mode == "1":
-    username = input("Username: ")
+    username = input("Username: ").strip().lower()
     password = getpass.getpass("Password: ")
     enable_totp = input("Enable TOTP? (y/n): ").strip().lower() == "y"
 
@@ -61,7 +61,7 @@ if mode == "1":
     print(f"User '{username}' created successfully.")
 
 elif mode == "2":
-    username = input("Username: ")
+    username = input("Username: ").strip().lower()
 
     cur.execute("SELECT id, totp_enabled FROM users WHERE username = %s", (username,))
     row = cur.fetchone()

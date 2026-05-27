@@ -39,6 +39,9 @@ out/
 ### Python ###
 .venv/
 
+### Logs ###
+logs/
+
 ### Sensitive ###
 .env
 CLAUDE.md

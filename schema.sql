@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS users (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username     TEXT NOT NULL UNIQUE,
+    username     TEXT NOT NULL,
     password     TEXT NOT NULL,
     totp_secret  TEXT,
     totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS entries (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, entry_date)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (LOWER(username));
 
 CREATE INDEX IF NOT EXISTS entries_user_date_idx ON entries (user_id, entry_date DESC);
 CREATE INDEX IF NOT EXISTS entries_search_vector_idx ON entries USING GIN (search_vector);

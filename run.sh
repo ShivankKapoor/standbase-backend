@@ -5,6 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IMAGE_NAME="standbase-backend"
 CONTAINER_NAME="standbase-backend"
 ENV_FILE="$SCRIPT_DIR/.env"
+LOGS_DIR="$SCRIPT_DIR/logs"
+START_TS="$(date +%Y%m%d_%H%M%S)"
+LOG_FILE="$LOGS_DIR/standbase-backend${START_TS}.log"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Error: .env file not found at $ENV_FILE"
@@ -28,4 +31,6 @@ podman run -d \
   -p 5554:8080 \
   "$IMAGE_NAME"
 
-echo "Container started. Logs: podman logs -f $CONTAINER_NAME"
+mkdir -p "$LOGS_DIR"
+podman logs -f "$CONTAINER_NAME" >> "$LOG_FILE" 2>&1 &
+echo "Container started. Logging to $LOG_FILE"
