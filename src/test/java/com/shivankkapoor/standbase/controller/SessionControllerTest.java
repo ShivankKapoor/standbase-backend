@@ -81,6 +81,6 @@ class SessionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ok"));
 
-        verify(authService).logoutByUserId(USER_ID);
+        verify(authService).logoutByUserId(USER_ID, "1.2.3.4");
     }
 }

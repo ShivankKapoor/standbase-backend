@@ -18,6 +18,7 @@ class AuthServiceTest {
     private UserRepository userRepository;
     private SessionService sessionService;
     private PreAuthService preAuthService;
+    private DiscordService discordService;
     private AuthService authService;
 
     private static final String IP = "1.2.3.4";
@@ -28,7 +29,8 @@ class AuthServiceTest {
         userRepository = mock(UserRepository.class);
         sessionService = mock(SessionService.class);
         preAuthService = mock(PreAuthService.class);
-        authService = new AuthService(userRepository, PASSWORD_ENCODER, sessionService, preAuthService);
+        discordService = mock(DiscordService.class);
+        authService = new AuthService(userRepository, PASSWORD_ENCODER, sessionService, preAuthService, discordService);
     }
 
     private User buildUser(String password, boolean totpEnabled) {
