@@ -14,6 +14,8 @@ public class StandbaseApplication {
 		System.setProperty("DB_PASSWORD", dotenv.get("DB_PASSWORD"));
 		String serverPort = dotenv.get("SERVER_PORT");
 		System.setProperty("SERVER_PORT", serverPort != null ? serverPort : "8080");
+		String discordWebhook = dotenv.get("DISCORD_WEBHOOK");
+		if (discordWebhook != null) System.setProperty("DISCORD_WEBHOOK", discordWebhook);
 		SpringApplication.run(StandbaseApplication.class, args);
 	}
 

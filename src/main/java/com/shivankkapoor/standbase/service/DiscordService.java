@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -52,6 +53,35 @@ public class DiscordService {
 
     public void logout(String username, String ip) {
         sendEmbed("🚪 Logged Out", GREY, username, ip);
+    }
+
+    public void ipMismatch(UUID userId, String expectedIp, String actualIp) {
+        if (webhookUrl == null || webhookUrl.isBlank()) return;
+
+        Map<String, Object> embed = Map.of(
+                "title", "🚨 IP Mismatch — Session Invalidated",
+                "color", RED,
+                "fields", List.of(
+                        Map.of("name", "User ID", "value", "`" + userId + "`", "inline", false),
+                        Map.of("name", "Expected IP", "value", "`" + expectedIp + "`", "inline", true),
+                        Map.of("name", "Actual IP",   "value", "`" + actualIp + "`",  "inline", true)
+                ),
+                "timestamp", Instant.now().toString(),
+                "footer", Map.of("text", "Standbase Auth")
+        );
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                restClient.post()
+                        .uri(webhookUrl)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(Map.of("embeds", List.of(embed)))
+                        .retrieve()
+                        .toBodilessEntity();
+            } catch (Exception e) {
+                log.warn("Discord notification failed: {}", e.getMessage());
+            }
+        });
     }
 
     private void sendEmbed(String title, int color, String username, String ip) {
