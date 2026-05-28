@@ -37,6 +37,14 @@ class SessionServiceTest {
     }
 
     @Test
+    void getSessionUserID_wrongIp_invalidatesToken() {
+        UUID userId = UUID.randomUUID();
+        String token = sessionService.createSession(userId, "1.2.3.4");
+        sessionService.getSessionUserID(token, "5.6.7.8");
+        assertThat(sessionService.getSessionUserID(token, "1.2.3.4")).isNull();
+    }
+
+    @Test
     void getSessionUserID_unknownToken_returnsNull() {
         assertThat(sessionService.getSessionUserID("nonexistent", "1.2.3.4")).isNull();
     }

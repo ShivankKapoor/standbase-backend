@@ -46,7 +46,8 @@ public class SessionService {
             return false;
         }
         if (!(session.ip.equals(ip))) {
-            log.warn("IP mismatch for user {} expected IP:{} received IP:{}", session.userId(), session.ip(), ip);
+            log.warn("IP mismatch for user {} expected IP:{} received IP:{} — invalidating session", session.userId(), session.ip(), ip);
+            logout(sessionToken);
             return false;
         }
         if (Instant.now().isAfter(session.expiresAt)) {
