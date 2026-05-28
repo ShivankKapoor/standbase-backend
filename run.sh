@@ -6,7 +6,7 @@ IMAGE_NAME="standbase-backend"
 CONTAINER_NAME="standbase-backend"
 ENV_FILE="$SCRIPT_DIR/.env"
 LOGS_DIR="$SCRIPT_DIR/logs"
-START_TS="$(date +%Y%m%d_%H%M%S)"
+START_TS="$(date +%Y-%m-%d-%H-%M-%S)"
 LOG_FILE="$LOGS_DIR/standbase-backend${START_TS}.log"
 
 if [ ! -f "$ENV_FILE" ]; then
