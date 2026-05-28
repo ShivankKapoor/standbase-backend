@@ -22,14 +22,17 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final SessionService sessionService;
     private final PreAuthService preAuthService;
+    private final DiscordService discordService;
     private final CodeVerifier codeVerifier;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       SessionService sessionService, PreAuthService preAuthService) {
+                       SessionService sessionService, PreAuthService preAuthService,
+                       DiscordService discordService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.sessionService = sessionService;
         this.preAuthService = preAuthService;
+        this.discordService = discordService;
         DefaultCodeVerifier verifier = new DefaultCodeVerifier(new DefaultCodeGenerator(), new SystemTimeProvider());
         verifier.setAllowedTimePeriodDiscrepancy(1);
         this.codeVerifier = verifier;
@@ -41,17 +44,21 @@ public class AuthService {
         Optional<User> attemptedUser = userRepository.findByUsername(username.toLowerCase());
         if (attemptedUser.isEmpty()) {
             log.warn("No user found for login request {}", username);
+            discordService.loginFailed(username, ip);
             return LoginResult.failure();
         }
         User user = attemptedUser.get();
         if (!passwordEncoder.matches(password, user.getPassword())) {
             log.warn("Invalid password attempt for user {}", username);
+            discordService.loginFailed(user.getUsername(), ip);
             return LoginResult.failure();
         }
         if (Boolean.TRUE.equals(user.getTotpEnabled())) {
+            discordService.credentialsAccepted(user.getUsername(), ip);
             String preAuthToken = preAuthService.createToken(user.getId());
             return LoginResult.totpRequired(preAuthToken);
         }
+        discordService.loginSuccess(user.getUsername(), ip);
         String sessionToken = sessionService.createSession(user.getId(), ip);
         return LoginResult.success(sessionToken);
     }
@@ -69,8 +76,10 @@ public class AuthService {
         }
         if (!codeVerifier.isValidCode(user.get().getTotpSecret(), totpCode)) {
             log.warn("Invalid TOTP code for user {}", userId);
+            discordService.totpFailed(user.get().getUsername(), ip);
             return null;
         }
+        discordService.totpSuccess(user.get().getUsername(), ip);
         return sessionService.createSession(userId, ip);
     }
 
@@ -84,8 +93,10 @@ public class AuthService {
         sessionService.logout(sessionToken);
     }
 
-    public void logoutByUserId(UUID userId) {
+    public void logoutByUserId(UUID userId, String ip) {
+        String username = getUsernameById(userId);
         sessionService.logoutByUserId(userId);
+        discordService.logout(username != null ? username : "unknown", ip);
     }
 
     public record LoginResult(boolean success, boolean totpRequired, String sessionToken, String preAuthToken) {
