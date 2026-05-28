@@ -5,11 +5,14 @@ import com.shivankkapoor.standbase.filter.EntryRateLimitFilter;
 import com.shivankkapoor.standbase.filter.SessionAuthFilter;
 import com.shivankkapoor.standbase.service.IpService;
 import com.shivankkapoor.standbase.service.SessionService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -25,6 +28,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
@@ -97,14 +101,35 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = List.of(allowedOrigins.split(","));
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(false);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-        return source;
+        return new LoggingCorsConfigurationSource(source, origins);
+    }
+
+    private static class LoggingCorsConfigurationSource implements CorsConfigurationSource {
+        private static final Logger log = LoggerFactory.getLogger(LoggingCorsConfigurationSource.class);
+        private final CorsConfigurationSource delegate;
+        private final Set<String> allowedOrigins;
+
+        LoggingCorsConfigurationSource(CorsConfigurationSource delegate, List<String> origins) {
+            this.delegate = delegate;
+            this.allowedOrigins = Set.copyOf(origins);
+        }
+
+        @Override
+        public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+            String origin = request.getHeader("Origin");
+            if (origin != null && !allowedOrigins.contains(origin)) {
+                log.warn("CORS rejected: origin '{}' not allowed — {} {}", origin, request.getMethod(), request.getRequestURI());
+            }
+            return delegate.getCorsConfiguration(request);
+        }
     }
 
     @Bean
