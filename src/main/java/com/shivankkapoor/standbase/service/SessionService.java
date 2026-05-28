@@ -18,9 +18,14 @@ public class SessionService {
     record Session(UUID userId, String ip, Instant expiresAt) {
     }
 
+    private final DiscordService discordService;
     private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> reverseSessionLookup = new ConcurrentHashMap<>();
     private final SecureRandom secureRandom = new SecureRandom();
+
+    public SessionService(DiscordService discordService) {
+        this.discordService = discordService;
+    }
 
     private String generateToken() {
         byte[] bytes = new byte[32];
@@ -48,6 +53,7 @@ public class SessionService {
         if (!(session.ip.equals(ip))) {
             log.warn("IP mismatch for user {} expected IP:{} received IP:{} — invalidating session", session.userId(), session.ip(), ip);
             logout(sessionToken);
+            discordService.ipMismatch(session.userId(), session.ip(), ip);
             return false;
         }
         if (Instant.now().isAfter(session.expiresAt)) {

@@ -6,14 +6,17 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 class SessionServiceTest {
 
+    private DiscordService discordService;
     private SessionService sessionService;
 
     @BeforeEach
     void setUp() {
-        sessionService = new SessionService();
+        discordService = mock(DiscordService.class);
+        sessionService = new SessionService(discordService);
     }
 
     @Test
@@ -37,11 +40,12 @@ class SessionServiceTest {
     }
 
     @Test
-    void getSessionUserID_wrongIp_invalidatesToken() {
+    void getSessionUserID_wrongIp_invalidatesTokenAndNotifiesDiscord() {
         UUID userId = UUID.randomUUID();
         String token = sessionService.createSession(userId, "1.2.3.4");
         sessionService.getSessionUserID(token, "5.6.7.8");
         assertThat(sessionService.getSessionUserID(token, "1.2.3.4")).isNull();
+        verify(discordService).ipMismatch(userId, "1.2.3.4", "5.6.7.8");
     }
 
     @Test
