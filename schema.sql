@@ -65,3 +65,4 @@ REVOKE CREATE ON SCHEMA public FROM standbase_app;
 
 -- 6. Apply Catch-All Rights to Currently Existing Objects
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO standbase_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO standbase_app;
