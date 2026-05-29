@@ -64,7 +64,7 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/auth/**", "/health").permitAll()
+                .requestMatchers("/", "/auth/**", "/health","/monitor").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
