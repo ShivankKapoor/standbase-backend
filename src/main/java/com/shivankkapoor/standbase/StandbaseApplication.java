@@ -3,8 +3,12 @@ package com.shivankkapoor.standbase;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableAsync
+@EnableScheduling
 public class StandbaseApplication {
 
 	public static void main(String[] args) {
@@ -16,6 +20,8 @@ public class StandbaseApplication {
 		System.setProperty("SERVER_PORT", serverPort != null ? serverPort : "8080");
 		String discordWebhook = dotenv.get("DISCORD_WEBHOOK");
 		if (discordWebhook != null) System.setProperty("DISCORD_WEBHOOK", discordWebhook);
+		String env = dotenv.get("ENV");
+		if (env != null) System.setProperty("ENV", env);
 		SpringApplication.run(StandbaseApplication.class, args);
 	}
 

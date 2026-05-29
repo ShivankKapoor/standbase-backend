@@ -2,6 +2,7 @@ package com.shivankkapoor.standbase.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -89,6 +90,15 @@ public class SessionService {
             return;
         }
         logout(sessionToken);
+    }
+
+    @Scheduled(cron = "0 0 0 * * *", zone = "America/Chicago")
+    public void evictAllSessions() {
+        int count = sessions.size();
+        sessions.clear();
+        reverseSessionLookup.clear();
+        log.info("Session cleanup complete — evicted {} session(s)", count);
+        discordService.sessionCleanup(count);
     }
 
     private void invalidateSessions(UUID userId){
