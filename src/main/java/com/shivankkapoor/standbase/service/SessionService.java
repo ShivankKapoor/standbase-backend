@@ -92,7 +92,7 @@ public class SessionService {
         logout(sessionToken);
     }
 
-    @Scheduled(cron = "0 0 12 * * *", zone = "America/Chicago")
+    @Scheduled(cron = "0 0 0 * * *", zone = "America/Chicago")
     public void evictExpiredSessions() {
         int[] count = {0};
         sessions.entrySet().removeIf(entry -> {
