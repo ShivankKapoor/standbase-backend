@@ -65,6 +65,27 @@ public class DiscordService {
     }
 
     @Async
+    public void sessionCleanup(int evicted) {
+        if (dev) {
+            log.warn("[DEV] Skipping Discord notification: session cleanup evicted {} session(s)", evicted);
+            return;
+        }
+        if (webhookUrl == null || webhookUrl.isBlank()) return;
+
+        Map<String, Object> embed = Map.of(
+                "title", "🧹 Session Cleanup",
+                "color", GREY,
+                "fields", List.of(
+                        Map.of("name", "Evicted Sessions", "value", String.valueOf(evicted), "inline", true)
+                ),
+                "timestamp", Instant.now().toString(),
+                "footer", Map.of("text", "Standbase Auth")
+        );
+
+        post(embed);
+    }
+
+    @Async
     public void ipMismatch(UUID userId, String expectedIp, String actualIp) {
         if (dev) {
             log.warn("[DEV] Skipping Discord notification: IP mismatch for user {} expected {} got {}", userId, expectedIp, actualIp);
