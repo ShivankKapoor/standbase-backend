@@ -93,18 +93,12 @@ public class SessionService {
     }
 
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Chicago")
-    public void evictExpiredSessions() {
-        int[] count = {0};
-        sessions.entrySet().removeIf(entry -> {
-            if (Instant.now().isAfter(entry.getValue().expiresAt())) {
-                reverseSessionLookup.remove(entry.getValue().userId());
-                count[0]++;
-                return true;
-            }
-            return false;
-        });
-        log.info("Session cleanup complete — evicted {} expired session(s)", count[0]);
-        discordService.sessionCleanup(count[0]);
+    public void evictAllSessions() {
+        int count = sessions.size();
+        sessions.clear();
+        reverseSessionLookup.clear();
+        log.info("Session cleanup complete — evicted {} session(s)", count);
+        discordService.sessionCleanup(count);
     }
 
     private void invalidateSessions(UUID userId){

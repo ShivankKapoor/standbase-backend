@@ -62,7 +62,7 @@ public class MainController {
 
     @DeleteMapping("/admin/session-cleanup")
     ResponseEntity<Map<String, String>> sessionCleanup() {
-        sessionService.evictExpiredSessions();
+        sessionService.evictAllSessions();
         Map<String, String> resp = new LinkedHashMap<>();
         resp.put("status", "ok");
         return ResponseEntity.ok(resp);
