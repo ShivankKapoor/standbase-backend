@@ -25,9 +25,12 @@ public class DiscordService {
 
     private final RestClient restClient;
     private final String webhookUrl;
+    private final boolean dev;
 
-    public DiscordService(@Value("${discord.webhook.url:}") String webhookUrl) {
+    public DiscordService(@Value("${discord.webhook.url:}") String webhookUrl,
+                          @Value("${application.env:}") String env) {
         this.webhookUrl = webhookUrl;
+        this.dev = "DEV".equalsIgnoreCase(env);
         this.restClient = RestClient.create();
     }
 
@@ -63,6 +66,10 @@ public class DiscordService {
 
     @Async
     public void ipMismatch(UUID userId, String expectedIp, String actualIp) {
+        if (dev) {
+            log.warn("[DEV] Skipping Discord notification: IP mismatch for user {} expected {} got {}", userId, expectedIp, actualIp);
+            return;
+        }
         if (webhookUrl == null || webhookUrl.isBlank()) return;
 
         Map<String, Object> embed = Map.of(
@@ -81,6 +88,10 @@ public class DiscordService {
     }
 
     private void sendEmbed(String title, int color, String username, String ip) {
+        if (dev) {
+            log.warn("[DEV] Skipping Discord notification: {} for {} from {}", title, username, ip);
+            return;
+        }
         if (webhookUrl == null || webhookUrl.isBlank()) return;
 
         Map<String, Object> embed = Map.of(
