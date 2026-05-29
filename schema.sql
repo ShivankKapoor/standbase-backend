@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS auth_events (
     user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     ip_address  TEXT NOT NULL,
     event_type  TEXT NOT NULL,
+    country     TEXT,
+    city        TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -35,6 +37,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (LOWER(usern
 
 CREATE INDEX IF NOT EXISTS entries_user_date_idx ON entries (user_id, entry_date DESC);
 CREATE INDEX IF NOT EXISTS auth_events_user_created_idx ON auth_events (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS auth_events_ip_idx ON auth_events (ip_address);
 CREATE INDEX IF NOT EXISTS entries_search_vector_idx ON entries USING GIN (search_vector);
 
 CREATE OR REPLACE FUNCTION entries_search_vector_update() RETURNS TRIGGER AS $$
