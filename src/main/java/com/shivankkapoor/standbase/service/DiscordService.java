@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -11,7 +12,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Service
 public class DiscordService {
@@ -25,37 +25,72 @@ public class DiscordService {
 
     private final RestClient restClient;
     private final String webhookUrl;
+    private final boolean dev;
 
-    public DiscordService(@Value("${discord.webhook.url:}") String webhookUrl) {
+    public DiscordService(@Value("${discord.webhook.url:}") String webhookUrl,
+                          @Value("${application.env:}") String env) {
         this.webhookUrl = webhookUrl;
+        this.dev = "DEV".equalsIgnoreCase(env);
         this.restClient = RestClient.create();
     }
 
+    @Async
     public void loginFailed(String username, String ip) {
         sendEmbed("⚠️ Login Failed", RED, username, ip);
     }
 
+    @Async
     public void credentialsAccepted(String username, String ip) {
         sendEmbed("🔑 Password Accepted — Awaiting 2FA", ORANGE, username, ip);
     }
 
+    @Async
     public void loginSuccess(String username, String ip) {
         sendEmbed("✅ Logged In", GREEN, username, ip);
     }
 
+    @Async
     public void totpFailed(String username, String ip) {
         sendEmbed("❌ Wrong 2FA Code", RED, username, ip);
     }
 
+    @Async
     public void totpSuccess(String username, String ip) {
         sendEmbed("✅ 2FA Verified — Login Complete", GREEN, username, ip);
     }
 
+    @Async
     public void logout(String username, String ip) {
         sendEmbed("🚪 Logged Out", GREY, username, ip);
     }
 
+    @Async
+    public void sessionCleanup(int evicted) {
+        if (dev) {
+            log.warn("[DEV] Skipping Discord notification: session cleanup evicted {} session(s)", evicted);
+            return;
+        }
+        if (webhookUrl == null || webhookUrl.isBlank()) return;
+
+        Map<String, Object> embed = Map.of(
+                "title", "🧹 Session Cleanup",
+                "color", GREY,
+                "fields", List.of(
+                        Map.of("name", "Evicted Sessions", "value", String.valueOf(evicted), "inline", true)
+                ),
+                "timestamp", Instant.now().toString(),
+                "footer", Map.of("text", "Standbase Auth")
+        );
+
+        post(embed);
+    }
+
+    @Async
     public void ipMismatch(UUID userId, String expectedIp, String actualIp) {
+        if (dev) {
+            log.warn("[DEV] Skipping Discord notification: IP mismatch for user {} expected {} got {}", userId, expectedIp, actualIp);
+            return;
+        }
         if (webhookUrl == null || webhookUrl.isBlank()) return;
 
         Map<String, Object> embed = Map.of(
@@ -70,21 +105,14 @@ public class DiscordService {
                 "footer", Map.of("text", "Standbase Auth")
         );
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                restClient.post()
-                        .uri(webhookUrl)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(Map.of("embeds", List.of(embed)))
-                        .retrieve()
-                        .toBodilessEntity();
-            } catch (Exception e) {
-                log.warn("Discord notification failed: {}", e.getMessage());
-            }
-        });
+        post(embed);
     }
 
     private void sendEmbed(String title, int color, String username, String ip) {
+        if (dev) {
+            log.warn("[DEV] Skipping Discord notification: {} for {} from {}", title, username, ip);
+            return;
+        }
         if (webhookUrl == null || webhookUrl.isBlank()) return;
 
         Map<String, Object> embed = Map.of(
@@ -98,17 +126,19 @@ public class DiscordService {
                 "footer", Map.of("text", "Standbase Auth")
         );
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                restClient.post()
-                        .uri(webhookUrl)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(Map.of("embeds", List.of(embed)))
-                        .retrieve()
-                        .toBodilessEntity();
-            } catch (Exception e) {
-                log.warn("Discord notification failed: {}", e.getMessage());
-            }
-        });
+        post(embed);
+    }
+
+    private void post(Map<String, Object> embed) {
+        try {
+            restClient.post()
+                    .uri(webhookUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("embeds", List.of(embed)))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("Discord notification failed: {}", e.getMessage());
+        }
     }
 }

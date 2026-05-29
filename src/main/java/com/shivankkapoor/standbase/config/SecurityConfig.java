@@ -1,5 +1,6 @@
 package com.shivankkapoor.standbase.config;
 
+import com.shivankkapoor.standbase.filter.AdminRateLimitFilter;
 import com.shivankkapoor.standbase.filter.AuthRateLimitFilter;
 import com.shivankkapoor.standbase.filter.EntryRateLimitFilter;
 import com.shivankkapoor.standbase.filter.SessionAuthFilter;
@@ -38,6 +39,11 @@ public class SecurityConfig {
     private String allowedOrigins;
 
     @Bean
+    public AdminRateLimitFilter adminRateLimitFilter(IpService ipService) {
+        return new AdminRateLimitFilter(ipService);
+    }
+
+    @Bean
     public AuthRateLimitFilter authRateLimitFilter(IpService ipService) {
         return new AuthRateLimitFilter(ipService);
     }
@@ -54,6 +60,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
+                                           AdminRateLimitFilter adminRateLimitFilter,
                                            AuthRateLimitFilter authRateLimitFilter,
                                            SessionAuthFilter sessionAuthFilter,
                                            EntryRateLimitFilter entryRateLimitFilter) throws Exception {
@@ -64,18 +71,26 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/auth/**", "/health").permitAll()
+                .requestMatchers("/", "/auth/**", "/health", "/monitor", "/admin/**").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, e) ->
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED))
             )
+            .addFilterBefore(adminRateLimitFilter, LogoutFilter.class)
             .addFilterBefore(authRateLimitFilter, LogoutFilter.class)
             .addFilterBefore(sessionAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(entryRateLimitFilter, AnonymousAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public FilterRegistrationBean<AdminRateLimitFilter> adminRateLimitFilterRegistration(AdminRateLimitFilter filter) {
+        FilterRegistrationBean<AdminRateLimitFilter> reg = new FilterRegistrationBean<>(filter);
+        reg.setEnabled(false);
+        return reg;
     }
 
     @Bean

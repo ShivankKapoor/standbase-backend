@@ -45,3 +45,6 @@ logs/
 ### Sensitive ###
 .env
 CLAUDE.md
+
+### Mac stuff ###
+.DS_Store
