@@ -23,7 +23,7 @@ class AuthEventServiceTest {
     @BeforeEach
     void setUp() {
         authEventRepository = mock(AuthEventRepository.class);
-        authEventService = new AuthEventService(authEventRepository);
+        authEventService = new AuthEventService(authEventRepository, "PROD");
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.shivankkapoor.standbase.controller;
 import com.shivankkapoor.standbase.service.HealthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,10 +17,13 @@ import java.util.Map;
 public class MainController {
     private static final Logger log = LoggerFactory.getLogger(MainController.class);
     private final HealthService healthService;
+    private final String env;
     private final Instant startTime = Instant.now();
 
-    public MainController(HealthService healthService) {
+    public MainController(HealthService healthService,
+                          @Value("${application.env:}") String env) {
         this.healthService = healthService;
+        this.env = env.isBlank() ? "UNKNOWN" : env.toUpperCase();
     }
 
     @GetMapping("/")
@@ -42,6 +46,7 @@ public class MainController {
 
         resp.put("name", "Standbase-Backend");
         resp.put("status", "Up");
+        resp.put("env", env);
         resp.put("uptime", uptimeStr);
         resp.put("platform", "Java");
         resp.put("version", System.getProperty("java.version"));
