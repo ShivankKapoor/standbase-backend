@@ -22,4 +22,8 @@ public class AuthEvent {
     private AuthEventType eventType;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+    @Column(name = "country", nullable = true, updatable = true)
+    private String country;
+    @Column(name = "city", nullable = true, updatable = true)
+    private String city;
 }
