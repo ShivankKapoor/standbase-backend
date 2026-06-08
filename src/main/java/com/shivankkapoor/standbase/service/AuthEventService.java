@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -22,7 +23,9 @@ public class AuthEventService {
     private static final Logger log = LoggerFactory.getLogger(AuthEventService.class);
     private final AuthEventRepository authEventRepository;
     private final boolean dev;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(3))
+            .build();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String meridianBaseUrl;
 
@@ -62,6 +65,7 @@ public class AuthEventService {
         try {
             var request = HttpRequest.newBuilder()
                     .uri(URI.create(meridianBaseUrl + "/location/" + ip))
+                    .timeout(Duration.ofSeconds(30))
                     .GET()
                     .build();
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
