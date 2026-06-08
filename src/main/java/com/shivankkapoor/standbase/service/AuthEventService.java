@@ -24,11 +24,14 @@ public class AuthEventService {
     private final boolean dev;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final String meridianBaseUrl;
 
     public AuthEventService(AuthEventRepository authEventRepository,
-                            @Value("${application.env:}") String env) {
+                            @Value("${application.env:}") String env,
+                            @Value("${meridian.base-url}") String meridianBaseUrl) {
         this.authEventRepository = authEventRepository;
         this.dev = "DEV".equalsIgnoreCase(env);
+        this.meridianBaseUrl = meridianBaseUrl;
     }
 
     @Async
@@ -53,45 +56,24 @@ public class AuthEventService {
     }
 
     private IpResponseDTO getLocation(String ip) {
-        log.info("Getting ip location via DB");
-        IpResponseDTO location = getLocationFromDB(ip);
-        if (location != null){
-            return location;
-        };
-        log.info("Not found in DB getting via IP API");
-        return getLocationViaAPI(ip);
-    }
-
-    private IpResponseDTO getLocationFromDB(String ip) {
-        return authEventRepository.findMostRecentWithLocationByIp(ip)
-                .map(event -> {
-                    IpResponseDTO resp = new IpResponseDTO();
-                    resp.setCity(event.getCity());
-                    resp.setCountry(event.getCountry());
-                    return resp;
-                })
-                .orElse(null);
-    }
-
-    private IpResponseDTO getLocationViaAPI(String ip){
         IpResponseDTO resp = new IpResponseDTO();
+        resp.setCity("UNKNOWN");
+        resp.setCountry("UNKNOWN");
         try {
             var request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://ipapi.co/" + ip + "/json/"))
-                    .header("User-Agent", "java-ip-client")
+                    .uri(URI.create(meridianBaseUrl + "/location/" + ip))
                     .GET()
                     .build();
-            var responseBody = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body();
-            var json = objectMapper.readTree(responseBody);
-
-            String city = json.path("city").textValue();
-            String country = json.path("country_name").textValue();
-
-            resp.setCity(city);
-            resp.setCountry(country);
-
+            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                log.warn("Meridian returned status {} for IP {}", response.statusCode(), ip);
+                return resp;
+            }
+            var json = objectMapper.readTree(response.body());
+            resp.setCity(json.path("city").textValue());
+            resp.setCountry(json.path("country").textValue());
         } catch (Exception e) {
-            log.error("Error getting IP location for IP {} Error:",ip,e);
+            log.error("Error getting IP location for IP {} from meridian:", ip, e);
         }
         return resp;
     }

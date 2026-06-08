@@ -5,7 +5,10 @@
       "Read(//tmp/**)",
       "Bash(./gradlew test *)",
       "WebFetch(domain:rieckpil.de)",
-      "Bash(xargs cat -n)"
+      "Bash(xargs cat -n)",
+      "Bash(./gradlew compileJava)",
+      "Bash(bash gradlew compileJava)",
+      "Bash(bash gradlew test)"
     ]
   }
 }

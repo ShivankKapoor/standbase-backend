@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 
 @Service
@@ -39,23 +41,14 @@ public class IpService {
     private boolean isValid(String ip) {
         if (ip.isBlank())
             return false;
-        if (ip.length() < 7)
+        if ("unknown".equalsIgnoreCase(ip))
             return false;
-        String lower = ip.toLowerCase();
-        if (List.of("unknown", "localhost", "127.0.0.1", "::1").contains(lower))
+        try {
+            InetAddress addr = InetAddress.getByName(ip);
+            if (addr.isLoopbackAddress() || addr.isSiteLocalAddress() || addr.isLinkLocalAddress())
+                return false;
+        } catch (UnknownHostException e) {
             return false;
-        if (lower.startsWith("192.168.") || lower.startsWith("10."))
-            return false;
-        if (lower.startsWith("172.")) {
-            String[] parts = lower.split("\\.");
-            if (parts.length >= 2) {
-                try {
-                    int second = Integer.parseInt(parts[1]);
-                    if (second >= 16 && second <= 31)
-                        return false;
-                } catch (NumberFormatException ignored) {
-                }
-            }
         }
         return true;
     }
