@@ -1,31 +1,32 @@
 package com.shivankkapoor.standbase.service;
 
+import com.shivankkapoor.standbase.model.Session;
+import com.shivankkapoor.standbase.repository.SessionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SessionService {
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
-
-    record Session(UUID userId, String ip, Instant expiresAt) {
-    }
+    private static final long SESSION_DURATION_HOURS = 4;
 
     private final DiscordService discordService;
-    private final ConcurrentHashMap<String, Session> sessions = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, String> reverseSessionLookup = new ConcurrentHashMap<>();
+    private final SessionRepository sessionRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public SessionService(DiscordService discordService) {
+    public SessionService(DiscordService discordService, SessionRepository sessionRepository) {
         this.discordService = discordService;
+        this.sessionRepository = sessionRepository;
     }
 
     private String generateToken() {
@@ -34,80 +35,82 @@ public class SessionService {
         return HexFormat.of().formatHex(bytes);
     }
 
+    @Transactional
     public String createSession(UUID userId, String ip) {
         log.info("Create session request for user {}", userId);
         invalidateSessions(userId);
-        Instant expireTime = Instant.now().plus(30, ChronoUnit.MINUTES);
-        Session val = new Session(userId, ip, expireTime);
-        String userToken = generateToken();
-        sessions.put(userToken, val);
-        reverseSessionLookup.put(userId, userToken);
-        return userToken;
+        Instant expireTime = Instant.now().plus(SESSION_DURATION_HOURS, ChronoUnit.HOURS);
+        String token = generateToken();
+        sessionRepository.save(new Session(token, userId, ip, expireTime));
+        return token;
     }
 
-    private boolean isTokenValid(String sessionToken, String ip) {
-        Session session = sessions.get(sessionToken);
-        if (session == null) {
-            log.warn("No session found for incoming request from IP {}", ip);
+    private boolean isTokenValid(Session session, String ip) {
+        if (!session.getIp().equals(ip)) {
+            log.warn("IP mismatch for user {} expected IP:{} received IP:{} — invalidating session",
+                    session.getUserId(), session.getIp(), ip);
+            sessionRepository.delete(session);
+            discordService.ipMismatch(session.getUserId(), session.getIp(), ip);
             return false;
         }
-        if (!(session.ip.equals(ip))) {
-            log.warn("IP mismatch for user {} expected IP:{} received IP:{} — invalidating session", session.userId(), session.ip(), ip);
-            logout(sessionToken);
-            discordService.ipMismatch(session.userId(), session.ip(), ip);
-            return false;
-        }
-        if (Instant.now().isAfter(session.expiresAt)) {
-            log.info("Session expired for user {}", session.userId());
-            logout(sessionToken);
+        if (Instant.now().isAfter(session.getExpiresAt())) {
+            log.info("Session expired for user {}", session.getUserId());
+            sessionRepository.delete(session);
             return false;
         }
         return true;
     }
 
+    @Transactional
     public UUID getSessionUserID(String sessionToken, String ip) {
-        if (!(isTokenValid(sessionToken, ip))) {
+        Optional<Session> sessionOpt = sessionRepository.findById(sessionToken);
+        if (sessionOpt.isEmpty()) {
+            log.warn("No session found for incoming request from IP {}", ip);
             return null;
         }
-        Session session = sessions.get(sessionToken);
-        return session.userId();
+        Session session = sessionOpt.get();
+        if (!isTokenValid(session, ip)) {
+            return null;
+        }
+        return session.getUserId();
     }
 
+    @Transactional
     public void logout(String sessionToken) {
-        Session session = sessions.remove(sessionToken);
-        if (session == null) {
+        Optional<Session> session = sessionRepository.findById(sessionToken);
+        if (session.isEmpty()) {
             log.warn("Logout request for non-existent session");
             return;
         }
-        reverseSessionLookup.remove(session.userId());
-        log.info("Session logged out for user {}", session.userId());
+        sessionRepository.deleteById(sessionToken);
+        log.info("Session logged out for user {}", session.get().getUserId());
     }
 
+    @Transactional
     public void logoutByUserId(UUID userId) {
-        String sessionToken = reverseSessionLookup.get(userId);
-        if (sessionToken == null) {
+        if (!sessionRepository.findByUserId(userId).isPresent()) {
             log.warn("Logout request for non-existent session for user {}", userId);
             return;
         }
-        logout(sessionToken);
+        sessionRepository.deleteByUserId(userId);
+        log.info("Session logged out for user {}", userId);
     }
 
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Chicago")
+    @Transactional
     public void evictAllSessions() {
-        int count = sessions.size();
-        sessions.clear();
-        reverseSessionLookup.clear();
+        long count = sessionRepository.count();
+        sessionRepository.deleteAll();
         log.info("Session cleanup complete — evicted {} session(s)", count);
-        discordService.sessionCleanup(count);
+        discordService.sessionCleanup((int) count);
     }
 
-    private void invalidateSessions(UUID userId){
-        String prevSessionToken = reverseSessionLookup.get(userId);
-        if(prevSessionToken==null){
-            log.info("No previous session for {}",userId);
-        }else{
-            log.info("Invalidating previous session {}",prevSessionToken);
-            logout(prevSessionToken);
+    private void invalidateSessions(UUID userId) {
+        if (sessionRepository.findByUserId(userId).isPresent()) {
+            log.info("Invalidating previous session for user {}", userId);
+            sessionRepository.deleteByUserId(userId);
+        } else {
+            log.info("No previous session for {}", userId);
         }
     }
 }
