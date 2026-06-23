@@ -38,7 +38,7 @@ Run `schema.sql` against your PostgreSQL instance as a superuser:
 psql -U postgres -d standbase -f schema.sql
 ```
 
-This creates the `users`, `entries`, and `auth_events` tables, all indexes, the `tsvector` trigger, and the least-privilege `standbase_app` role.
+This creates the `users`, `entries`, `auth_events`, and `sessions` tables, all indexes, the `tsvector` trigger, and the least-privilege `standbase_app` role.
 
 ### 2. Environment
 
@@ -110,7 +110,7 @@ All endpoints below require `Authorization: Bearer <token>`.
 2. If the user has TOTP enabled, the response is `{ status: "totp_required", preAuthToken: "..." }` — the pre-auth token is valid for one TOTP attempt and expires quickly
 3. `POST /auth/totp/verify` with `{ preAuthToken, totpCode }` → `{ status: "ok", sessionToken: "..." }`
 4. If TOTP is not enabled, step 1 returns the session token directly
-5. Session tokens expire after 30 minutes and are bound to the originating IP
+5. Session tokens expire after 4 hours and are bound to the originating IP
 
 ## Project Structure
 
@@ -125,8 +125,8 @@ src/main/java/com/shivankkapoor/standbase/
 │                   # CreateEntryResponseDTO, EntryOverviewResponseDTO, ResponseDTO
 ├── filter/         # SessionAuthFilter, AuthRateLimitFilter,
 │                   # EntryRateLimitFilter, AdminRateLimitFilter
-├── model/          # User, Entry, AuthEvent, DayType, AuthEventType
-├── repository/     # UserRepository, EntryRepository,
+├── model/          # User, Entry, Session, AuthEvent, DayType, AuthEventType
+├── repository/     # UserRepository, EntryRepository, SessionRepository,
 │                   # AuthEventRepository, HealthRepository
 └── service/        # AuthService, SessionService, PreAuthService, EntryService,
                     # AuthEventService, IpService, HealthService, DiscordService
