@@ -1,22 +1,58 @@
 package com.shivankkapoor.standbase.service;
 
+import com.shivankkapoor.standbase.model.Session;
+import com.shivankkapoor.standbase.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class SessionServiceTest {
 
     private DiscordService discordService;
+    private SessionRepository sessionRepository;
     private SessionService sessionService;
+    private Map<String, Session> store;
 
     @BeforeEach
     void setUp() {
+        store = new HashMap<>();
         discordService = mock(DiscordService.class);
-        sessionService = new SessionService(discordService);
+        sessionRepository = mock(SessionRepository.class);
+
+        when(sessionRepository.save(any())).thenAnswer(inv -> {
+            Session s = inv.getArgument(0);
+            store.put(s.getToken(), s);
+            return s;
+        });
+        when(sessionRepository.findById(any())).thenAnswer(inv ->
+                Optional.ofNullable(store.get((String) inv.getArgument(0))));
+        when(sessionRepository.findByUserId(any())).thenAnswer(inv ->
+                store.values().stream()
+                        .filter(s -> s.getUserId().equals(inv.getArgument(0)))
+                        .findFirst());
+        doAnswer(inv -> {
+            store.remove(((Session) inv.getArgument(0)).getToken());
+            return null;
+        }).when(sessionRepository).delete(any());
+        doAnswer(inv -> {
+            store.remove((String) inv.getArgument(0));
+            return null;
+        }).when(sessionRepository).deleteById(any());
+        doAnswer(inv -> {
+            UUID userId = inv.getArgument(0);
+            store.values().removeIf(s -> s.getUserId().equals(userId));
+            return null;
+        }).when(sessionRepository).deleteByUserId(any());
+
+        sessionService = new SessionService(discordService, sessionRepository);
     }
 
     @Test
