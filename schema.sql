@@ -40,6 +40,15 @@ CREATE INDEX IF NOT EXISTS auth_events_user_created_idx ON auth_events (user_id,
 CREATE INDEX IF NOT EXISTS auth_events_ip_idx ON auth_events (ip_address);
 CREATE INDEX IF NOT EXISTS entries_search_vector_idx ON entries USING GIN (search_vector);
 
+CREATE TABLE IF NOT EXISTS sessions (
+    token      TEXT PRIMARY KEY,
+    user_id    UUID NOT NULL UNIQUE,
+    ip         TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
+
 CREATE OR REPLACE FUNCTION entries_search_vector_update() RETURNS TRIGGER AS $$
 BEGIN
     NEW.search_vector := to_tsvector('english', COALESCE(NEW.content, ''));
