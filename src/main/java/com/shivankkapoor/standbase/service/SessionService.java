@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -50,7 +52,18 @@ public class SessionService {
             log.warn("IP mismatch for user {} expected IP:{} received IP:{} — invalidating session",
                     session.getUserId(), session.getIp(), ip);
             sessionRepository.delete(session);
-            discordService.ipMismatch(session.getUserId(), session.getIp(), ip);
+            UUID userId = session.getUserId();
+            String sessionIp = session.getIp();
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        discordService.ipMismatch(userId, sessionIp, ip);
+                    }
+                });
+            } else {
+                discordService.ipMismatch(userId, sessionIp, ip);
+            }
             return false;
         }
         if (Instant.now().isAfter(session.getExpiresAt())) {
