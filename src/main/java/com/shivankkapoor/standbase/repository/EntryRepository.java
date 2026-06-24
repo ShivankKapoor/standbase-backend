@@ -13,5 +13,5 @@ import java.util.UUID;
 public interface EntryRepository extends CrudRepository<Entry, UUID> {
     Optional<Entry> findByUserIdAndEntryDate(UUID userId, LocalDate entryDate);
     List<Entry> findByUserIdAndEntryDateBetweenOrderByEntryDateDesc(UUID userId, LocalDate from, LocalDate to);
-    void deleteByUserIdAndEntryDate(UUID userId, LocalDate entryDate);
+    int deleteByUserIdAndEntryDate(UUID userId, LocalDate entryDate);
 }

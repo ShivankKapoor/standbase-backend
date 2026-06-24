@@ -48,8 +48,9 @@ class SessionServiceTest {
         }).when(sessionRepository).deleteById(any());
         doAnswer(inv -> {
             UUID userId = inv.getArgument(0);
+            int before = store.size();
             store.values().removeIf(s -> s.getUserId().equals(userId));
-            return null;
+            return before - store.size();
         }).when(sessionRepository).deleteByUserId(any());
 
         sessionService = new SessionService(discordService, sessionRepository);

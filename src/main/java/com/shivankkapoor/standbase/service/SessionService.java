@@ -101,11 +101,11 @@ public class SessionService {
 
     @Transactional
     public void logoutByUserId(UUID userId) {
-        if (!sessionRepository.findByUserId(userId).isPresent()) {
+        int deleted = sessionRepository.deleteByUserId(userId);
+        if (deleted == 0) {
             log.warn("Logout request for non-existent session for user {}", userId);
             return;
         }
-        sessionRepository.deleteByUserId(userId);
         log.info("Session logged out for user {}", userId);
     }
 
@@ -119,9 +119,9 @@ public class SessionService {
     }
 
     private void invalidateSessions(UUID userId) {
-        if (sessionRepository.findByUserId(userId).isPresent()) {
+        int deleted = sessionRepository.deleteByUserId(userId);
+        if (deleted > 0) {
             log.info("Invalidating previous session for user {}", userId);
-            sessionRepository.deleteByUserId(userId);
         } else {
             log.info("No previous session for {}", userId);
         }
