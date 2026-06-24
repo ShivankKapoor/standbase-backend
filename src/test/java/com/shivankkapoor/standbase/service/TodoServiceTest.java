@@ -2,6 +2,7 @@ package com.shivankkapoor.standbase.service;
 
 import com.shivankkapoor.standbase.dto.request.CreateTodoRequestDTO;
 import com.shivankkapoor.standbase.dto.request.UpdateTodoRequestDTO;
+import com.shivankkapoor.standbase.dto.response.TodoSummaryResponseDTO;
 import com.shivankkapoor.standbase.model.Todo;
 import com.shivankkapoor.standbase.repository.TodoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -198,6 +199,81 @@ class TodoServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.stream().filter(t -> t.getId().equals(id0)).findFirst().get().getPosition()).isEqualTo(0);
         assertThat(result.stream().filter(t -> t.getId().equals(id1)).findFirst().get().getPosition()).isEqualTo(1);
+    }
+
+    @Test
+    void getTodoSummary_onlyReturnsDatesWithTodos() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        Todo todo = buildTodo(UUID.randomUUID(), USER_ID, 0);
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of(todo));
+
+        List<TodoSummaryResponseDTO> result = todoService.getTodoSummary(USER_ID, from, to);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getDate()).isEqualTo(DATE);
+        assertThat(result.get(0).isAllCompleted()).isFalse();
+    }
+
+    @Test
+    void getTodoSummary_allCompleted_whenAllTodosOnDayAreCompleted() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        Todo t1 = buildTodo(UUID.randomUUID(), USER_ID, 0);
+        Todo t2 = buildTodo(UUID.randomUUID(), USER_ID, 1);
+        t1.setCompleted(true);
+        t2.setCompleted(true);
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of(t1, t2));
+
+        List<TodoSummaryResponseDTO> result = todoService.getTodoSummary(USER_ID, from, to);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).isAllCompleted()).isTrue();
+    }
+
+    @Test
+    void getTodoSummary_notAllCompleted_whenAnyTodoIsIncomplete() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        Todo t1 = buildTodo(UUID.randomUUID(), USER_ID, 0);
+        Todo t2 = buildTodo(UUID.randomUUID(), USER_ID, 1);
+        t1.setCompleted(true);
+        t2.setCompleted(false);
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of(t1, t2));
+
+        List<TodoSummaryResponseDTO> result = todoService.getTodoSummary(USER_ID, from, to);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).isAllCompleted()).isFalse();
+    }
+
+    @Test
+    void getTodoSummary_groupsByDate() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        LocalDate otherDate = LocalDate.of(2026, 5, 28);
+
+        Todo t1 = buildTodo(UUID.randomUUID(), USER_ID, 0); // DATE
+        Todo t2 = buildTodo(UUID.randomUUID(), USER_ID, 0); // otherDate
+        t2.setEntryDate(otherDate);
+        t2.setCompleted(true);
+
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of(t1, t2));
+
+        List<TodoSummaryResponseDTO> result = todoService.getTodoSummary(USER_ID, from, to);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getDate()).isEqualTo(DATE);
+        assertThat(result.get(1).getDate()).isEqualTo(otherDate);
+    }
+
+    @Test
+    void getTodoSummary_emptyRange_returnsEmpty() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of());
+
+        assertThat(todoService.getTodoSummary(USER_ID, from, to)).isEmpty();
     }
 
     @Test

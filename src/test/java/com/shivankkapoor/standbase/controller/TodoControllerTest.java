@@ -6,6 +6,7 @@ import com.shivankkapoor.standbase.config.SecurityConfig;
 import com.shivankkapoor.standbase.dto.request.CreateTodoRequestDTO;
 import com.shivankkapoor.standbase.dto.request.ReorderTodosRequestDTO;
 import com.shivankkapoor.standbase.dto.request.UpdateTodoRequestDTO;
+import com.shivankkapoor.standbase.dto.response.TodoSummaryResponseDTO;
 import com.shivankkapoor.standbase.model.Todo;
 import com.shivankkapoor.standbase.service.IpService;
 import com.shivankkapoor.standbase.service.SessionService;
@@ -218,5 +219,35 @@ class TodoControllerTest {
         mockMvc.perform(delete("/todos/" + TODO_ID)
                         .header("Authorization", "Bearer other-token"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getTodoSummary_authenticated_returnsSummary() throws Exception {
+        TodoSummaryResponseDTO summary = new TodoSummaryResponseDTO();
+        summary.setDate(DATE);
+        summary.setAllCompleted(false);
+        when(todoService.getTodoSummary(eq(USER_ID), any(), any())).thenReturn(List.of(summary));
+
+        mockMvc.perform(get("/todos/summary?year=2026&month=5")
+                        .header("Authorization", "Bearer " + TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].date").value("2026-05-26"))
+                .andExpect(jsonPath("$[0].allCompleted").value(false));
+    }
+
+    @Test
+    void getTodoSummary_emptyMonth_returnsEmptyList() throws Exception {
+        when(todoService.getTodoSummary(eq(USER_ID), any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/todos/summary?year=2026&month=5")
+                        .header("Authorization", "Bearer " + TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void getTodoSummary_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/todos/summary?year=2026&month=5"))
+                .andExpect(status().isUnauthorized());
     }
 }

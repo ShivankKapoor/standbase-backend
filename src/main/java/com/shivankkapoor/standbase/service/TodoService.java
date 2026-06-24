@@ -2,6 +2,7 @@ package com.shivankkapoor.standbase.service;
 
 import com.shivankkapoor.standbase.dto.request.CreateTodoRequestDTO;
 import com.shivankkapoor.standbase.dto.request.UpdateTodoRequestDTO;
+import com.shivankkapoor.standbase.dto.response.TodoSummaryResponseDTO;
 import com.shivankkapoor.standbase.model.Todo;
 import com.shivankkapoor.standbase.repository.TodoRepository;
 import org.springframework.stereotype.Service;
@@ -9,10 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class TodoService {
@@ -55,6 +54,21 @@ public class TodoService {
         if (todo.isEmpty()) return false;
         todoRepository.deleteById(id);
         return true;
+    }
+
+    public List<TodoSummaryResponseDTO> getTodoSummary(UUID userId, LocalDate from, LocalDate to) {
+        return todoRepository.findByUserIdAndEntryDateBetween(userId, from, to)
+                .stream()
+                .collect(Collectors.groupingBy(Todo::getEntryDate))
+                .entrySet().stream()
+                .map(e -> {
+                    TodoSummaryResponseDTO dto = new TodoSummaryResponseDTO();
+                    dto.setDate(e.getKey());
+                    dto.setAllCompleted(e.getValue().stream().allMatch(Todo::isCompleted));
+                    return dto;
+                })
+                .sorted(Comparator.comparing(TodoSummaryResponseDTO::getDate))
+                .toList();
     }
 
     @Transactional
