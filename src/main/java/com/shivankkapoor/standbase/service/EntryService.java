@@ -36,11 +36,7 @@ public class EntryService {
 
     @Transactional
     public boolean deleteEntry(UUID userId, LocalDate date) {
-        if (entryRepository.findByUserIdAndEntryDate(userId, date).isEmpty()) {
-            return false;
-        }
-        entryRepository.deleteByUserIdAndEntryDate(userId, date);
-        return true;
+        return entryRepository.deleteByUserIdAndEntryDate(userId, date) > 0;
     }
 
     public Entry createEntry(UUID userId, CreateEntryRequestDTO dto) {

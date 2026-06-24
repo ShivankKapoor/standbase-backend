@@ -40,6 +40,18 @@ CREATE INDEX IF NOT EXISTS auth_events_user_created_idx ON auth_events (user_id,
 CREATE INDEX IF NOT EXISTS auth_events_ip_idx ON auth_events (ip_address);
 CREATE INDEX IF NOT EXISTS entries_search_vector_idx ON entries USING GIN (search_vector);
 
+CREATE TABLE IF NOT EXISTS todos (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    entry_date  DATE NOT NULL,
+    content     TEXT NOT NULL,
+    completed   BOOLEAN NOT NULL DEFAULT FALSE,
+    position    INTEGER NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS todos_user_date_idx ON todos (user_id, entry_date, position ASC);
+
 CREATE TABLE IF NOT EXISTS sessions (
     token      TEXT PRIMARY KEY,
     user_id    UUID NOT NULL UNIQUE,
