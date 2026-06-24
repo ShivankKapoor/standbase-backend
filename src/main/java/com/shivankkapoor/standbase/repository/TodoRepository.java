@@ -9,5 +9,6 @@ import java.util.UUID;
 
 public interface TodoRepository extends CrudRepository<Todo, UUID> {
     List<Todo> findByUserIdAndEntryDateOrderByPositionAscCreatedAtAsc(UUID userId, LocalDate entryDate);
+    List<Todo> findByUserIdAndEntryDateBetween(UUID userId, LocalDate from, LocalDate to);
     void deleteByIdAndUserId(UUID id, UUID userId);
 }

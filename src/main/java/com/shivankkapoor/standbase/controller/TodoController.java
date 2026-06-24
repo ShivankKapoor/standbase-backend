@@ -4,6 +4,7 @@ import com.shivankkapoor.standbase.dto.request.CreateTodoRequestDTO;
 import com.shivankkapoor.standbase.dto.request.ReorderTodosRequestDTO;
 import com.shivankkapoor.standbase.dto.request.UpdateTodoRequestDTO;
 import com.shivankkapoor.standbase.dto.response.TodoResponseDTO;
+import com.shivankkapoor.standbase.dto.response.TodoSummaryResponseDTO;
 import com.shivankkapoor.standbase.model.Todo;
 import com.shivankkapoor.standbase.service.TodoService;
 import jakarta.validation.Valid;
@@ -12,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +31,16 @@ public class TodoController {
     public ResponseEntity<TodoResponseDTO> createTodo(@Valid @RequestBody CreateTodoRequestDTO dto, Authentication authentication) {
         UUID userId = (UUID) authentication.getPrincipal();
         return ResponseEntity.ok(toResponse(todoService.createTodo(userId, dto)));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<TodoSummaryResponseDTO>> getTodoSummary(
+            @RequestParam int year,
+            @RequestParam int month,
+            Authentication authentication) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        YearMonth ym = YearMonth.of(year, month);
+        return ResponseEntity.ok(todoService.getTodoSummary(userId, ym.atDay(1), ym.atEndOfMonth()));
     }
 
     @GetMapping("")
