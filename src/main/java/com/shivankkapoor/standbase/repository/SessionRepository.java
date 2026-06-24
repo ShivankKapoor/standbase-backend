@@ -16,5 +16,5 @@ public interface SessionRepository extends CrudRepository<Session, String> {
 
     @Modifying
     @Query("DELETE FROM Session s WHERE s.userId = :userId")
-    void deleteByUserId(@Param("userId") UUID userId);
+    int deleteByUserId(@Param("userId") UUID userId);
 }

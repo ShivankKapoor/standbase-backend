@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 public class TodoService {
@@ -73,15 +74,16 @@ public class TodoService {
 
     @Transactional
     public List<Todo> reorderTodos(UUID userId, List<UUID> ids) {
+        Map<UUID, Todo> todoMap = StreamSupport.stream(todoRepository.findAllById(ids).spliterator(), false)
+                .filter(t -> t.getUserId().equals(userId))
+                .collect(Collectors.toMap(Todo::getId, t -> t));
         List<Todo> toSave = new ArrayList<>();
         for (int i = 0; i < ids.size(); i++) {
-            final int pos = i;
-            todoRepository.findById(ids.get(i))
-                    .filter(t -> t.getUserId().equals(userId))
-                    .ifPresent(todo -> {
-                        todo.setPosition(pos);
-                        toSave.add(todo);
-                    });
+            Todo todo = todoMap.get(ids.get(i));
+            if (todo != null) {
+                todo.setPosition(i);
+                toSave.add(todo);
+            }
         }
         List<Todo> saved = new ArrayList<>();
         todoRepository.saveAll(toSave).forEach(saved::add);

@@ -190,8 +190,7 @@ class TodoServiceTest {
         Todo todo0 = buildTodo(id0, USER_ID, 1);
         Todo todo1 = buildTodo(id1, USER_ID, 0);
 
-        when(todoRepository.findById(id0)).thenReturn(Optional.of(todo0));
-        when(todoRepository.findById(id1)).thenReturn(Optional.of(todo1));
+        when(todoRepository.findAllById(any())).thenReturn(List.of(todo0, todo1));
         when(todoRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
 
         List<Todo> result = todoService.reorderTodos(USER_ID, List.of(id0, id1));
@@ -283,8 +282,7 @@ class TodoServiceTest {
         Todo ownTodo = buildTodo(ownId, USER_ID, 0);
         Todo otherTodo = buildTodo(otherId, UUID.randomUUID(), 0);
 
-        when(todoRepository.findById(ownId)).thenReturn(Optional.of(ownTodo));
-        when(todoRepository.findById(otherId)).thenReturn(Optional.of(otherTodo));
+        when(todoRepository.findAllById(any())).thenReturn(List.of(ownTodo, otherTodo));
         when(todoRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
 
         List<Todo> result = todoService.reorderTodos(USER_ID, List.of(ownId, otherId));
