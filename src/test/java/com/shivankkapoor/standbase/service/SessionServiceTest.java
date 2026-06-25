@@ -5,6 +5,7 @@ import com.shivankkapoor.standbase.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -104,6 +105,23 @@ class SessionServiceTest {
         String token = sessionService.createSession(userId, "1.2.3.4");
         sessionService.logoutByUserId(userId);
         assertThat(sessionService.getSessionUserID(token, "1.2.3.4")).isNull();
+    }
+
+    @Test
+    void getSessionUserID_expiredSession_returnsNull() {
+        UUID userId = UUID.randomUUID();
+        Session expired = new Session("expiredtoken", userId, "1.2.3.4", Instant.now().minusSeconds(1));
+        store.put("expiredtoken", expired);
+        assertThat(sessionService.getSessionUserID("expiredtoken", "1.2.3.4")).isNull();
+    }
+
+    @Test
+    void getSessionUserID_expiredSession_notifiesDiscord() {
+        UUID userId = UUID.randomUUID();
+        Session expired = new Session("expiredtoken", userId, "1.2.3.4", Instant.now().minusSeconds(1));
+        store.put("expiredtoken", expired);
+        sessionService.getSessionUserID("expiredtoken", "1.2.3.4");
+        verify(discordService).sessionExpired(userId, "1.2.3.4");
     }
 
     @Test

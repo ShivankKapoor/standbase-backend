@@ -69,6 +69,8 @@ public class SessionService {
         if (Instant.now().isAfter(session.getExpiresAt())) {
             log.info("Session expired for user {}", session.getUserId());
             sessionRepository.delete(session);
+            UUID userId = session.getUserId();
+            discordService.sessionExpired(userId, ip);
             return false;
         }
         return true;

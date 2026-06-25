@@ -86,6 +86,28 @@ public class DiscordService {
     }
 
     @Async
+    public void sessionExpired(UUID userId, String ip) {
+        if (dev) {
+            log.warn("[DEV] Skipping Discord notification: session expired for user {} from {}", userId, ip);
+            return;
+        }
+        if (webhookUrl == null || webhookUrl.isBlank()) return;
+
+        Map<String, Object> embed = Map.of(
+                "title", "⏰ Session Expired",
+                "color", GREY,
+                "fields", List.of(
+                        Map.of("name", "User ID", "value", "`" + userId + "`", "inline", false),
+                        Map.of("name", "IP Address", "value", "`" + ip + "`", "inline", true)
+                ),
+                "timestamp", Instant.now().toString(),
+                "footer", Map.of("text", "Standbase Auth")
+        );
+
+        post(embed);
+    }
+
+    @Async
     public void ipMismatch(UUID userId, String expectedIp, String actualIp) {
         if (dev) {
             log.warn("[DEV] Skipping Discord notification: IP mismatch for user {} expected {} got {}", userId, expectedIp, actualIp);
