@@ -45,6 +45,11 @@ public class TodoService {
                 .map(todo -> {
                     if (dto.getContent() != null) todo.setContent(dto.getContent());
                     if (dto.getCompleted() != null) todo.setCompleted(dto.getCompleted());
+                    if (dto.getEntryDate() != null){
+                        todo.setEntryDate(dto.getEntryDate());
+                        int count = todoRepository.findByUserIdAndEntryDateOrderByPositionAscCreatedAtAsc(userId, dto.getEntryDate()).size();
+                        todo.setPosition(count);
+                    }
                     return todoRepository.save(todo);
                 });
     }
