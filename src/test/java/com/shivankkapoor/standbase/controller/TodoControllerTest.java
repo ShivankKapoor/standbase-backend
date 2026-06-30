@@ -153,6 +153,26 @@ class TodoControllerTest {
     }
 
     @Test
+    void updateTodo_withEntryDate_returns200WithNewDate() throws Exception {
+        LocalDate targetDate = DATE.plusDays(1);
+        Todo moved = buildTodo();
+        moved.setEntryDate(targetDate);
+        moved.setPosition(0);
+        when(todoService.updateTodo(eq(TODO_ID), eq(USER_ID), any())).thenReturn(Optional.of(moved));
+
+        UpdateTodoRequestDTO body = new UpdateTodoRequestDTO();
+        body.setEntryDate(targetDate);
+
+        mockMvc.perform(put("/todos/" + TODO_ID)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entryDate").value("2026-05-27"))
+                .andExpect(jsonPath("$.position").value(0));
+    }
+
+    @Test
     void updateTodo_notFound_returns404() throws Exception {
         when(todoService.updateTodo(eq(TODO_ID), eq(USER_ID), any())).thenReturn(Optional.empty());
 

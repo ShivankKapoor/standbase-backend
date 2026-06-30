@@ -135,6 +135,64 @@ class TodoServiceTest {
     }
 
     @Test
+    void updateTodo_entryDate_movesToTargetDateAndAppendsPosition() {
+        UUID id = UUID.randomUUID();
+        LocalDate targetDate = DATE.plusDays(1);
+        Todo todo = buildTodo(id, USER_ID, 2);
+        Todo existing = buildTodo(UUID.randomUUID(), USER_ID, 0);
+        existing.setEntryDate(targetDate);
+
+        when(todoRepository.findById(id)).thenReturn(Optional.of(todo));
+        when(todoRepository.findByUserIdAndEntryDateOrderByPositionAscCreatedAtAsc(USER_ID, targetDate))
+                .thenReturn(List.of(existing));
+        when(todoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateTodoRequestDTO dto = new UpdateTodoRequestDTO();
+        dto.setEntryDate(targetDate);
+
+        Optional<Todo> result = todoService.updateTodo(id, USER_ID, dto);
+        assertThat(result).isPresent();
+        assertThat(result.get().getEntryDate()).isEqualTo(targetDate);
+        assertThat(result.get().getPosition()).isEqualTo(1);
+    }
+
+    @Test
+    void updateTodo_entryDate_emptyTargetDay_positionIsZero() {
+        UUID id = UUID.randomUUID();
+        LocalDate targetDate = DATE.plusDays(1);
+        Todo todo = buildTodo(id, USER_ID, 0);
+
+        when(todoRepository.findById(id)).thenReturn(Optional.of(todo));
+        when(todoRepository.findByUserIdAndEntryDateOrderByPositionAscCreatedAtAsc(USER_ID, targetDate))
+                .thenReturn(List.of());
+        when(todoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateTodoRequestDTO dto = new UpdateTodoRequestDTO();
+        dto.setEntryDate(targetDate);
+
+        Optional<Todo> result = todoService.updateTodo(id, USER_ID, dto);
+        assertThat(result).isPresent();
+        assertThat(result.get().getEntryDate()).isEqualTo(targetDate);
+        assertThat(result.get().getPosition()).isEqualTo(0);
+    }
+
+    @Test
+    void updateTodo_nullEntryDate_dateUnchanged() {
+        UUID id = UUID.randomUUID();
+        Todo todo = buildTodo(id, USER_ID, 0);
+        when(todoRepository.findById(id)).thenReturn(Optional.of(todo));
+        when(todoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateTodoRequestDTO dto = new UpdateTodoRequestDTO(); // entryDate is null
+
+        Optional<Todo> result = todoService.updateTodo(id, USER_ID, dto);
+        assertThat(result).isPresent();
+        assertThat(result.get().getEntryDate()).isEqualTo(DATE);
+        verify(todoRepository, never())
+                .findByUserIdAndEntryDateOrderByPositionAscCreatedAtAsc(any(), any());
+    }
+
+    @Test
     void updateTodo_differentUser_returnsEmpty() {
         UUID id = UUID.randomUUID();
         Todo todo = buildTodo(id, UUID.randomUUID(), 0); // owned by someone else
