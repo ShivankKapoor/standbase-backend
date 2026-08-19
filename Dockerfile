@@ -1,5 +1,5 @@
 # Build stage
-FROM registry.access.redhat.com/ubi9/openjdk-25 AS builder
+FROM docker.io/library/ibm-semeru-runtimes:open-25-jdk AS builder
 USER root
 WORKDIR /build
 
@@ -13,7 +13,7 @@ COPY src src
 RUN ./gradlew bootJar --no-daemon -x test
 
 # Run stage
-FROM registry.access.redhat.com/ubi9/openjdk-25-runtime AS runner
+FROM docker.io/library/ibm-semeru-runtimes:open-25-jre AS runner
 WORKDIR /deployments
 
 COPY --from=builder --chown=185:root /build/build/libs/*-SNAPSHOT.jar app.jar
