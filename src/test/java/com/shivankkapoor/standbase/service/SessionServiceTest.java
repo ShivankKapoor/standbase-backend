@@ -1,5 +1,6 @@
 package com.shivankkapoor.standbase.service;
 
+import com.shivankkapoor.standbase.model.AuthEventType;
 import com.shivankkapoor.standbase.model.Session;
 import com.shivankkapoor.standbase.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ class SessionServiceTest {
 
     private DiscordService discordService;
     private SessionRepository sessionRepository;
+    private AuthEventService authEventService;
     private SessionService sessionService;
     private Map<String, Session> store;
 
@@ -27,6 +29,7 @@ class SessionServiceTest {
         store = new HashMap<>();
         discordService = mock(DiscordService.class);
         sessionRepository = mock(SessionRepository.class);
+        authEventService = mock(AuthEventService.class);
 
         when(sessionRepository.save(any())).thenAnswer(inv -> {
             Session s = inv.getArgument(0);
@@ -54,7 +57,7 @@ class SessionServiceTest {
             return before - store.size();
         }).when(sessionRepository).deleteByUserId(any());
 
-        sessionService = new SessionService(discordService, sessionRepository);
+        sessionService = new SessionService(discordService, sessionRepository, authEventService);
     }
 
     @Test
@@ -84,6 +87,14 @@ class SessionServiceTest {
         sessionService.getSessionUserID(token, "5.6.7.8");
         assertThat(sessionService.getSessionUserID(token, "1.2.3.4")).isNull();
         verify(discordService).ipMismatch(userId, "1.2.3.4", "5.6.7.8");
+    }
+
+    @Test
+    void getSessionUserID_wrongIp_logsIpMismatchAuthEvent() {
+        UUID userId = UUID.randomUUID();
+        String token = sessionService.createSession(userId, "1.2.3.4");
+        sessionService.getSessionUserID(token, "5.6.7.8");
+        verify(authEventService).logAuthEvent(userId, "5.6.7.8", AuthEventType.IP_MISMATCH);
     }
 
     @Test
@@ -122,6 +133,15 @@ class SessionServiceTest {
         store.put("expiredtoken", expired);
         sessionService.getSessionUserID("expiredtoken", "1.2.3.4");
         verify(discordService).sessionExpired(userId, "1.2.3.4");
+    }
+
+    @Test
+    void getSessionUserID_expiredSession_logsSessionExpiredAuthEvent() {
+        UUID userId = UUID.randomUUID();
+        Session expired = new Session("expiredtoken", userId, "1.2.3.4", Instant.now().minusSeconds(1));
+        store.put("expiredtoken", expired);
+        sessionService.getSessionUserID("expiredtoken", "1.2.3.4");
+        verify(authEventService).logAuthEvent(userId, "1.2.3.4", AuthEventType.SESSION_EXPIRED);
     }
 
     @Test

@@ -7,5 +7,7 @@ public enum AuthEventType {
     CREDENTIALS_ACCEPTED,
     TFA_FAIL,
     LOGOUT,
-    IP_MISMATCH
+    IP_MISMATCH,
+    TFA_REPLAY_FAIL,
+    SESSION_EXPIRED
 }
