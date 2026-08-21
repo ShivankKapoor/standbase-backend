@@ -1,7 +1,10 @@
 package com.shivankkapoor.standbase.service;
 
+import com.shivankkapoor.standbase.model.AuthEventType;
 import com.shivankkapoor.standbase.model.User;
 import com.shivankkapoor.standbase.repository.UserRepository;
+import dev.samstevens.totp.code.DefaultCodeGenerator;
+import dev.samstevens.totp.time.SystemTimeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,6 +23,7 @@ class AuthServiceTest {
     private PreAuthService preAuthService;
     private DiscordService discordService;
     private AuthEventService authEventService;
+    private TotpReplayService totpReplayService;
     private AuthService authService;
 
     private static final String IP = "1.2.3.4";
@@ -32,7 +36,8 @@ class AuthServiceTest {
         preAuthService = mock(PreAuthService.class);
         discordService = mock(DiscordService.class);
         authEventService = mock(AuthEventService.class);
-        authService = new AuthService(userRepository, PASSWORD_ENCODER, sessionService, preAuthService, discordService, authEventService);
+        totpReplayService = mock(TotpReplayService.class);
+        authService = new AuthService(userRepository, PASSWORD_ENCODER, sessionService, preAuthService, discordService, authEventService, totpReplayService);
     }
 
     private User buildUser(String password, boolean totpEnabled) {
@@ -45,6 +50,13 @@ class AuthServiceTest {
             user.setTotpSecret("JBSWY3DPEHPK3PXP");
         }
         return user;
+    }
+
+    // Generates a real, currently-valid TOTP code for the given secret, matching
+    // the 30-second time period AuthService's DefaultCodeVerifier uses internally.
+    private String validCodeFor(String secret) throws Exception {
+        long counter = new SystemTimeProvider().getTime() / 30;
+        return new DefaultCodeGenerator().generate(secret, counter);
     }
 
     @Test
@@ -111,6 +123,37 @@ class AuthServiceTest {
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
         // "000000" is almost certainly not a valid TOTP code for this secret
         assertThat(authService.verifyTotp("token", "000000", IP)).isNull();
+        verifyNoInteractions(sessionService);
+    }
+
+    @Test
+    void verifyTotp_freshValidCode_claimsCodeAndCreatesSession() throws Exception {
+        User user = buildUser("pass", true);
+        String code = validCodeFor(user.getTotpSecret());
+        when(preAuthService.validateAndConsume("token")).thenReturn(user.getId());
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(totpReplayService.claim(user.getId(), code)).thenReturn(true);
+        when(sessionService.createSession(user.getId(), IP)).thenReturn("session-token");
+
+        assertThat(authService.verifyTotp("token", code, IP)).isEqualTo("session-token");
+
+        verify(totpReplayService).claim(user.getId(), code);
+        verify(discordService).totpSuccess(user.getUsername(), IP);
+        verify(authEventService).logAuthEvent(user.getId(), IP, AuthEventType.LOGIN_SUCCESS_TFA);
+    }
+
+    @Test
+    void verifyTotp_replayedCode_returnsNullAndLogsReplay() throws Exception {
+        User user = buildUser("pass", true);
+        String code = validCodeFor(user.getTotpSecret());
+        when(preAuthService.validateAndConsume("token")).thenReturn(user.getId());
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(totpReplayService.claim(user.getId(), code)).thenReturn(false);
+
+        assertThat(authService.verifyTotp("token", code, IP)).isNull();
+
+        verify(authEventService).logAuthEvent(user.getId(), IP, AuthEventType.TFA_REPLAY_FAIL);
+        verify(discordService, never()).totpSuccess(any(), any());
         verifyNoInteractions(sessionService);
     }
 

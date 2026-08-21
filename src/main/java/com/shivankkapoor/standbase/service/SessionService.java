@@ -1,5 +1,6 @@
 package com.shivankkapoor.standbase.service;
 
+import com.shivankkapoor.standbase.model.AuthEventType;
 import com.shivankkapoor.standbase.model.Session;
 import com.shivankkapoor.standbase.repository.SessionRepository;
 import org.slf4j.Logger;
@@ -24,11 +25,13 @@ public class SessionService {
 
     private final DiscordService discordService;
     private final SessionRepository sessionRepository;
+    private final AuthEventService authEventService;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public SessionService(DiscordService discordService, SessionRepository sessionRepository) {
+    public SessionService(DiscordService discordService, SessionRepository sessionRepository, AuthEventService authEventService) {
         this.discordService = discordService;
         this.sessionRepository = sessionRepository;
+        this.authEventService = authEventService;
     }
 
     private String generateToken() {
@@ -59,10 +62,12 @@ public class SessionService {
                     @Override
                     public void afterCommit() {
                         discordService.ipMismatch(userId, sessionIp, ip);
+                        authEventService.logAuthEvent(userId, ip, AuthEventType.IP_MISMATCH);
                     }
                 });
             } else {
                 discordService.ipMismatch(userId, sessionIp, ip);
+                authEventService.logAuthEvent(userId, ip, AuthEventType.IP_MISMATCH);
             }
             return false;
         }
@@ -71,6 +76,7 @@ public class SessionService {
             sessionRepository.delete(session);
             UUID userId = session.getUserId();
             discordService.sessionExpired(userId, ip);
+            authEventService.logAuthEvent(userId, ip, AuthEventType.SESSION_EXPIRED);
             return false;
         }
         return true;

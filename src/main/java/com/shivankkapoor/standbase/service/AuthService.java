@@ -26,16 +26,18 @@ public class AuthService {
     private final DiscordService discordService;
     private final AuthEventService authEventService;
     private final CodeVerifier codeVerifier;
+    private final TotpReplayService totpReplayService;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        SessionService sessionService, PreAuthService preAuthService,
-                       DiscordService discordService, AuthEventService authEventService) {
+                       DiscordService discordService, AuthEventService authEventService, TotpReplayService totpReplayService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.sessionService = sessionService;
         this.preAuthService = preAuthService;
         this.discordService = discordService;
         this.authEventService = authEventService;
+        this.totpReplayService = totpReplayService;
         DefaultCodeVerifier verifier = new DefaultCodeVerifier(new DefaultCodeGenerator(), new SystemTimeProvider());
         verifier.setAllowedTimePeriodDiscrepancy(1);
         this.codeVerifier = verifier;
@@ -86,6 +88,12 @@ public class AuthService {
             authEventService.logAuthEvent(userId, ip, AuthEventType.TFA_FAIL);
             return null;
         }
+        if(!totpReplayService.claim(userId,totpCode)){
+            log.warn("TOTP Replay for user {}", userId);
+            authEventService.logAuthEvent(userId, ip, AuthEventType.TFA_REPLAY_FAIL);
+            return null;
+        }
+
         discordService.totpSuccess(user.get().getUsername(), ip);
         authEventService.logAuthEvent(userId, ip, AuthEventType.LOGIN_SUCCESS_TFA);
         return sessionService.createSession(userId, ip);
