@@ -40,7 +40,7 @@ public class EntryRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return !uri.startsWith("/entry") && !uri.startsWith("/session");
+        return !uri.startsWith("/entry") && !uri.startsWith("/session") && !uri.startsWith("/heatmap");
     }
 
     @Override
