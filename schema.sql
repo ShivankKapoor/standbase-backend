@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS entries (
     entry_date   DATE NOT NULL,
     day_type     TEXT CHECK (day_type IN ('PTO', 'PLANNING', 'SUPPORT')),
     content      TEXT,
+    word_count   INTEGER GENERATED ALWAYS AS (
+        CASE WHEN content IS NULL OR trim(content) = '' THEN 0
+        ELSE array_length(regexp_split_to_array(trim(content), '\s+'), 1)
+        END
+    ) STORED,
     search_vector TSVECTOR,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
