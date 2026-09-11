@@ -11,6 +11,7 @@ import com.shivankkapoor.standbase.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
@@ -48,10 +49,14 @@ public class AuthService {
         }
 
         if (response.token() != null) {
+            log.info("Aldrop login succeeded for user {} from {}, session expires {}",
+                    username, ip, response.expiresAt());
             discordService.loginSuccess(username, ip);
             return LoginResult.success(response.token());
         }
 
+        log.info("Aldrop login requires TOTP for user {} from {}, challenge expires {}",
+                username, ip, response.expiresAt());
         discordService.credentialsAccepted(username, ip);
         return LoginResult.totpRequired(response.totpToken());
     }
@@ -72,6 +77,8 @@ public class AuthService {
 
         // Resolved for the username only — verify-totp carries no username of its own.
         ValidatedSession session = resolveSession(response.token(), ip, userAgent);
+        log.info("Aldrop TOTP verification succeeded for user {} from {}, session expires {}",
+                session != null ? session.username() : "unknown", ip, response.expiresAt());
         if (session != null) {
             discordService.totpSuccess(session.username(), ip);
         }
@@ -92,6 +99,7 @@ public class AuthService {
     public void logoutByUserId(UUID userId, String token, String ip) {
         try {
             postNoContent("/auth/logout", new AldropLogoutRequestDTO(token, ip));
+            log.info("Aldrop session revoked for user {} from {}", userId, ip);
         } catch (Exception e) {
             log.warn("Aldrop logout call failed for user {}", userId, e);
         }
@@ -107,13 +115,15 @@ public class AuthService {
             response = post("/auth/validate", new AldropValidateSessionRequestDTO(token, ip, userAgent),
                     AldropValidateSessionResponseDTO.class);
         } catch (HttpClientErrorException e) {
-            log.debug("Aldrop rejected session validation: {}", e.getStatusCode());
+            log.info("Aldrop rejected session validation from {}: {}", ip, e.getStatusCode());
             return null;
         } catch (Exception e) {
             log.warn("Aldrop session validation call failed", e);
             return null;
         }
 
+        log.info("Aldrop validated session for user {} ({}) from {}, expires {}",
+                response.username(), response.userId(), ip, response.expiresAt());
         provisionIfAbsent(response.userId(), response.username());
         return new ValidatedSession(response.userId(), response.username());
     }
@@ -128,22 +138,29 @@ public class AuthService {
         log.info("Provisioned local user record for Aldrop user {}", userId);
     }
 
+    // Request bodies carry passwords and session tokens, so only the endpoint and status are
+    // logged here — never the body itself.
     private <T> T post(String uri, Object body, Class<T> responseType) {
-        return aldropRestClient.post()
+        log.info("Calling Aldrop POST {}", uri);
+        ResponseEntity<T> response = aldropRestClient.post()
                 .uri(uri)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
-                .body(responseType);
+                .toEntity(responseType);
+        log.info("Aldrop POST {} responded {}", uri, response.getStatusCode());
+        return response.getBody();
     }
 
     private void postNoContent(String uri, Object body) {
-        aldropRestClient.post()
+        log.info("Calling Aldrop POST {}", uri);
+        ResponseEntity<Void> response = aldropRestClient.post()
                 .uri(uri)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
                 .toBodilessEntity();
+        log.info("Aldrop POST {} responded {}", uri, response.getStatusCode());
     }
 
     public record ValidatedSession(UUID userId, String username) {
