@@ -5,9 +5,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS users (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username     TEXT NOT NULL,
-    password     TEXT NOT NULL,
-    totp_secret  TEXT,
-    totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -28,21 +25,9 @@ CREATE TABLE IF NOT EXISTS entries (
     UNIQUE (user_id, entry_date)
 );
 
-CREATE TABLE IF NOT EXISTS auth_events (
-    id          BIGSERIAL PRIMARY KEY,
-    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    ip_address  TEXT NOT NULL,
-    event_type  TEXT NOT NULL,
-    country     TEXT,
-    city        TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (LOWER(username));
 
 CREATE INDEX IF NOT EXISTS entries_user_date_idx ON entries (user_id, entry_date DESC);
-CREATE INDEX IF NOT EXISTS auth_events_user_created_idx ON auth_events (user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS auth_events_ip_idx ON auth_events (ip_address);
 CREATE INDEX IF NOT EXISTS entries_search_vector_idx ON entries USING GIN (search_vector);
 
 CREATE TABLE IF NOT EXISTS todos (
@@ -56,15 +41,6 @@ CREATE TABLE IF NOT EXISTS todos (
 );
 
 CREATE INDEX IF NOT EXISTS todos_user_date_idx ON todos (user_id, entry_date, position ASC);
-
-CREATE TABLE IF NOT EXISTS sessions (
-    token      TEXT PRIMARY KEY,
-    user_id    UUID NOT NULL UNIQUE,
-    ip         TEXT NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
 
 CREATE OR REPLACE FUNCTION entries_search_vector_update() RETURNS TRIGGER AS $$
 BEGIN

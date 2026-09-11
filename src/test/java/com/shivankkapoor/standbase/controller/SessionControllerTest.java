@@ -3,7 +3,6 @@ package com.shivankkapoor.standbase.controller;
 import com.shivankkapoor.standbase.config.SecurityConfig;
 import com.shivankkapoor.standbase.service.AuthService;
 import com.shivankkapoor.standbase.service.IpService;
-import com.shivankkapoor.standbase.service.SessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +35,6 @@ class SessionControllerTest {
 
     @MockitoBean AuthService authService;
     @MockitoBean IpService ipService;
-    @MockitoBean SessionService sessionService;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String TOKEN = "test-session-token";
@@ -45,7 +43,7 @@ class SessionControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(wac).apply(springSecurity()).build();
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(sessionService.getSessionUserID(eq(TOKEN), eq("1.2.3.4"))).thenReturn(USER_ID);
+        when(authService.getSessionUserID(eq(TOKEN), eq("1.2.3.4"), any())).thenReturn(USER_ID);
     }
 
     @Test
@@ -67,7 +65,7 @@ class SessionControllerTest {
 
     @Test
     void check_invalidToken_returns401() throws Exception {
-        when(sessionService.getSessionUserID(eq("bad-token"), any())).thenReturn(null);
+        when(authService.getSessionUserID(eq("bad-token"), any(), any())).thenReturn(null);
 
         mockMvc.perform(get("/session/check")
                         .header("Authorization", "Bearer bad-token"))
@@ -81,6 +79,6 @@ class SessionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ok"));
 
-        verify(authService).logoutByUserId(USER_ID, "1.2.3.4");
+        verify(authService).logoutByUserId(USER_ID, TOKEN, "1.2.3.4");
     }
 }

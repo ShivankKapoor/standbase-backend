@@ -5,7 +5,7 @@ import com.shivankkapoor.standbase.dto.response.HeatMapResponseDTO;
 import com.shivankkapoor.standbase.model.EntryLength;
 import com.shivankkapoor.standbase.service.HeatMapService;
 import com.shivankkapoor.standbase.service.IpService;
-import com.shivankkapoor.standbase.service.SessionService;
+import com.shivankkapoor.standbase.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,7 @@ class HeatMapControllerTest {
 
     @MockitoBean HeatMapService heatMapService;
     @MockitoBean IpService ipService;
-    @MockitoBean SessionService sessionService;
+    @MockitoBean AuthService authService;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String TOKEN = "test-session-token";
@@ -49,7 +49,7 @@ class HeatMapControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(wac).apply(springSecurity()).build();
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(sessionService.getSessionUserID(eq(TOKEN), eq("1.2.3.4"))).thenReturn(USER_ID);
+        when(authService.getSessionUserID(eq(TOKEN), eq("1.2.3.4"), any())).thenReturn(USER_ID);
     }
 
     private HeatMapResponseDTO buildResponse() {
@@ -120,7 +120,7 @@ class HeatMapControllerTest {
     @Test
     void getHeatMap_differentUser_scopedToTheirOwnUserId() throws Exception {
         UUID otherUser = UUID.randomUUID();
-        when(sessionService.getSessionUserID(eq("other-token"), eq("1.2.3.4"))).thenReturn(otherUser);
+        when(authService.getSessionUserID(eq("other-token"), eq("1.2.3.4"), any())).thenReturn(otherUser);
         HeatMapResponseDTO otherUsersData = new HeatMapResponseDTO();
         otherUsersData.setAverage(42);
         otherUsersData.setEntries(List.of());

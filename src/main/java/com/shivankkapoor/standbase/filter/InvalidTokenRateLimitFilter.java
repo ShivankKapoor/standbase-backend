@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.shivankkapoor.standbase.service.IpService;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.EstimationProbe;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,12 +16,16 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-public class AdminRateLimitFilter extends OncePerRequestFilter {
+// Every request carrying a Bearer token is forwarded to Aldrop's /auth/validate, which has no
+// rate limit of its own. This throttles repeated invalid-token hits per IP so that garbage or
+// stolen tokens can't be used to hammer Aldrop through Standbase. Only failed validations consume
+// the bucket, so a legitimate session under normal load is never throttled.
+public class InvalidTokenRateLimitFilter extends OncePerRequestFilter {
 
     private final IpService ipService;
     private final LoadingCache<String, Bucket> cache;
 
-    public AdminRateLimitFilter(IpService ipService) {
+    public InvalidTokenRateLimitFilter(IpService ipService) {
         this.ipService = ipService;
         this.cache = Caffeine.newBuilder()
                 .expireAfterAccess(1, TimeUnit.HOURS)
@@ -40,7 +43,8 @@ public class AdminRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/admin/");
+        String authHeader = request.getHeader("Authorization");
+        return authHeader == null || !authHeader.startsWith("Bearer ");
     }
 
     @Override
@@ -49,15 +53,18 @@ public class AdminRateLimitFilter extends OncePerRequestFilter {
         String ip = ipService.getClientIp(request);
         Bucket bucket = cache.get(ip);
 
-        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-        if (!probe.isConsumed()) {
-            EstimationProbe estimation = bucket.estimateAbilityToConsume(1);
-            long waitSeconds = Math.max(1, estimation.getNanosToWaitForRefill() / 1_000_000_000L);
+        if (bucket.getAvailableTokens() <= 0) {
+            EstimationProbe probe = bucket.estimateAbilityToConsume(1);
+            long waitSeconds = Math.max(1, probe.getNanosToWaitForRefill() / 1_000_000_000L);
             response.setStatus(429);
             response.setHeader("Retry-After", String.valueOf(waitSeconds));
             return;
         }
 
         filterChain.doFilter(request, response);
+
+        if (response.getStatus() == 401) {
+            bucket.tryConsume(1);
+        }
     }
 }

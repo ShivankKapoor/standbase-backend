@@ -1,11 +1,11 @@
 package com.shivankkapoor.standbase.config;
 
-import com.shivankkapoor.standbase.filter.AdminRateLimitFilter;
 import com.shivankkapoor.standbase.filter.AuthRateLimitFilter;
 import com.shivankkapoor.standbase.filter.EntryRateLimitFilter;
+import com.shivankkapoor.standbase.filter.InvalidTokenRateLimitFilter;
 import com.shivankkapoor.standbase.filter.SessionAuthFilter;
+import com.shivankkapoor.standbase.service.AuthService;
 import com.shivankkapoor.standbase.service.IpService;
-import com.shivankkapoor.standbase.service.SessionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -18,8 +18,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -39,8 +37,8 @@ public class SecurityConfig {
     private String allowedOrigins;
 
     @Bean
-    public AdminRateLimitFilter adminRateLimitFilter(IpService ipService) {
-        return new AdminRateLimitFilter(ipService);
+    public InvalidTokenRateLimitFilter invalidTokenRateLimitFilter(IpService ipService) {
+        return new InvalidTokenRateLimitFilter(ipService);
     }
 
     @Bean
@@ -49,8 +47,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SessionAuthFilter sessionAuthFilter(SessionService sessionService, IpService ipService) {
-        return new SessionAuthFilter(sessionService, ipService);
+    public SessionAuthFilter sessionAuthFilter(AuthService authService, IpService ipService) {
+        return new SessionAuthFilter(authService, ipService);
     }
 
     @Bean
@@ -60,7 +58,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                           AdminRateLimitFilter adminRateLimitFilter,
+                                           InvalidTokenRateLimitFilter invalidTokenRateLimitFilter,
                                            AuthRateLimitFilter authRateLimitFilter,
                                            SessionAuthFilter sessionAuthFilter,
                                            EntryRateLimitFilter entryRateLimitFilter) throws Exception {
@@ -71,14 +69,14 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/auth/**", "/health", "/monitor", "/admin/**").permitAll()
+                .requestMatchers("/", "/auth/**", "/health", "/monitor").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, e) ->
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED))
             )
-            .addFilterBefore(adminRateLimitFilter, LogoutFilter.class)
+            .addFilterBefore(invalidTokenRateLimitFilter, LogoutFilter.class)
             .addFilterBefore(authRateLimitFilter, LogoutFilter.class)
             .addFilterBefore(sessionAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(entryRateLimitFilter, AnonymousAuthenticationFilter.class);
@@ -87,8 +85,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<AdminRateLimitFilter> adminRateLimitFilterRegistration(AdminRateLimitFilter filter) {
-        FilterRegistrationBean<AdminRateLimitFilter> reg = new FilterRegistrationBean<>(filter);
+    public FilterRegistrationBean<InvalidTokenRateLimitFilter> invalidTokenRateLimitFilterRegistration(InvalidTokenRateLimitFilter filter) {
+        FilterRegistrationBean<InvalidTokenRateLimitFilter> reg = new FilterRegistrationBean<>(filter);
         reg.setEnabled(false);
         return reg;
     }
@@ -145,10 +143,5 @@ public class SecurityConfig {
             }
             return delegate.getCorsConfiguration(request);
         }
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }

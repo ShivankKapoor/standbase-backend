@@ -11,7 +11,6 @@ import org.springframework.web.client.RestClient;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class DiscordService {
@@ -49,55 +48,20 @@ public class DiscordService {
         sendEmbed("✅ Logged In", GREEN, username, ip);
     }
 
+    // Aldrop conflates wrong code, replayed code, and expired/exhausted challenge into one 401
+    // with no userId, so this can no longer be attributed to a username — IP only.
     @Async
-    public void totpFailed(String username, String ip) {
-        sendEmbed("❌ Wrong 2FA Code", RED, username, ip);
-    }
-
-    @Async
-    public void totpSuccess(String username, String ip) {
-        sendEmbed("✅ 2FA Verified — Login Complete", GREEN, username, ip);
-    }
-
-    @Async
-    public void logout(String username, String ip) {
-        sendEmbed("🚪 Logged Out", GREY, username, ip);
-    }
-
-    @Async
-    public void sessionCleanup(int evicted) {
+    public void totpFailed(String ip) {
         if (dev) {
-            log.warn("[DEV] Skipping Discord notification: session cleanup evicted {} session(s)", evicted);
+            log.warn("[DEV] Skipping Discord notification: 2FA verification failed from {}", ip);
             return;
         }
         if (webhookUrl == null || webhookUrl.isBlank()) return;
 
         Map<String, Object> embed = Map.of(
-                "title", "🧹 Session Cleanup",
-                "color", GREY,
+                "title", "❌ 2FA Verification Failed",
+                "color", RED,
                 "fields", List.of(
-                        Map.of("name", "Evicted Sessions", "value", String.valueOf(evicted), "inline", true)
-                ),
-                "timestamp", Instant.now().toString(),
-                "footer", Map.of("text", "Standbase Auth")
-        );
-
-        post(embed);
-    }
-
-    @Async
-    public void sessionExpired(UUID userId, String ip) {
-        if (dev) {
-            log.warn("[DEV] Skipping Discord notification: session expired for user {} from {}", userId, ip);
-            return;
-        }
-        if (webhookUrl == null || webhookUrl.isBlank()) return;
-
-        Map<String, Object> embed = Map.of(
-                "title", "⏰ Session Expired",
-                "color", GREY,
-                "fields", List.of(
-                        Map.of("name", "User ID", "value", "`" + userId + "`", "inline", false),
                         Map.of("name", "IP Address", "value", "`" + ip + "`", "inline", true)
                 ),
                 "timestamp", Instant.now().toString(),
@@ -108,26 +72,13 @@ public class DiscordService {
     }
 
     @Async
-    public void ipMismatch(UUID userId, String expectedIp, String actualIp) {
-        if (dev) {
-            log.warn("[DEV] Skipping Discord notification: IP mismatch for user {} expected {} got {}", userId, expectedIp, actualIp);
-            return;
-        }
-        if (webhookUrl == null || webhookUrl.isBlank()) return;
+    public void totpSuccess(String username, String ip) {
+        sendEmbed("✅ 2FA Verified — Login Complete", GREEN, username, ip);
+    }
 
-        Map<String, Object> embed = Map.of(
-                "title", "🚨 IP Mismatch — Session Invalidated",
-                "color", RED,
-                "fields", List.of(
-                        Map.of("name", "User ID", "value", "`" + userId + "`", "inline", false),
-                        Map.of("name", "Expected IP", "value", "`" + expectedIp + "`", "inline", true),
-                        Map.of("name", "Actual IP",   "value", "`" + actualIp + "`",  "inline", true)
-                ),
-                "timestamp", Instant.now().toString(),
-                "footer", Map.of("text", "Standbase Auth")
-        );
-
-        post(embed);
+    @Async
+    public void logout(String username, String ip) {
+        sendEmbed("🚪 Logged Out", GREY, username, ip);
     }
 
     private void sendEmbed(String title, int color, String username, String ip) {

@@ -25,7 +25,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest, HttpServletRequest request) {
         String ip = ipService.getClientIp(request);
-        AuthService.LoginResult result = authService.login(loginRequest.getUsername(), loginRequest.getPassword(), ip);
+        String userAgent = request.getHeader("User-Agent");
+        AuthService.LoginResult result = authService.login(loginRequest.getUsername(), loginRequest.getPassword(), ip, userAgent);
+        if (result.rateLimited()) {
+            return ResponseEntity.status(429).build();
+        }
         if (!result.success()) {
             return ResponseEntity.status(401).build();
         }
@@ -43,13 +47,17 @@ public class AuthController {
     @PostMapping("/totp/verify")
     public ResponseEntity<LoginResponseDTO> verifyTotp(@Valid @RequestBody TotpVerifyRequestDTO totpRequest, HttpServletRequest request) {
         String ip = ipService.getClientIp(request);
-        String sessionToken = authService.verifyTotp(totpRequest.getPreAuthToken(), totpRequest.getTotpCode(), ip);
-        if (sessionToken == null) {
+        String userAgent = request.getHeader("User-Agent");
+        AuthService.VerifyTotpResult result = authService.verifyTotp(totpRequest.getPreAuthToken(), totpRequest.getTotpCode(), ip, userAgent);
+        if (result.rateLimited()) {
+            return ResponseEntity.status(429).build();
+        }
+        if (!result.success()) {
             return ResponseEntity.status(401).build();
         }
         LoginResponseDTO response = new LoginResponseDTO();
         response.setStatus("ok");
-        response.setSessionToken(sessionToken);
+        response.setSessionToken(result.sessionToken());
         return ResponseEntity.ok(response);
     }
 }
