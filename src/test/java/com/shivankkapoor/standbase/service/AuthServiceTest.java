@@ -1,6 +1,5 @@
 package com.shivankkapoor.standbase.service;
 
-import com.shivankkapoor.standbase.model.AuthEventType;
 import com.shivankkapoor.standbase.model.User;
 import com.shivankkapoor.standbase.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +31,6 @@ class AuthServiceTest {
 
     private UserRepository userRepository;
     private DiscordService discordService;
-    private AuthEventService authEventService;
     private MockRestServiceServer server;
     private AuthService authService;
 
@@ -40,13 +38,12 @@ class AuthServiceTest {
     void setUp() {
         userRepository = mock(UserRepository.class);
         discordService = mock(DiscordService.class);
-        authEventService = mock(AuthEventService.class);
 
         RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
         server = MockRestServiceServer.bindTo(builder).build();
         RestClient restClient = builder.build();
 
-        authService = new AuthService(restClient, userRepository, discordService, authEventService);
+        authService = new AuthService(restClient, userRepository, discordService);
     }
 
     private User buildUser(UUID id, String username) {
@@ -63,10 +60,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_wrongCredentials_returnsFailureAndAttributesLocally() {
-        User user = buildUser(UUID.randomUUID(), "shivank");
-        when(userRepository.findByUsername("shivank")).thenReturn(Optional.of(user));
-
+    void login_wrongCredentials_returnsFailure() {
         server.expect(requestTo(BASE_URL + "/auth/login"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED)
@@ -78,7 +72,6 @@ class AuthServiceTest {
         assertThat(result.success()).isFalse();
         assertThat(result.rateLimited()).isFalse();
         verify(discordService).loginFailed("shivank", IP);
-        verify(authEventService).logAuthEvent(user.getId(), IP, AuthEventType.LOGIN_FAIL);
         server.verify();
     }
 
@@ -99,16 +92,14 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_validCredentials_noTotp_returnsSessionTokenAndLogsSuccess() {
-        UUID userId = UUID.randomUUID();
-        when(userRepository.existsById(userId)).thenReturn(true);
-
+    void login_validCredentials_noTotp_returnsSessionToken() {
+        // Login alone makes no /auth/validate call — the local user row is provisioned on the
+        // first authenticated request instead.
         server.expect(requestTo(BASE_URL + "/auth/login"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess(
                         "{\"token\":\"session-token\",\"totpToken\":null,\"expiresAt\":\"2026-01-01T00:00:00Z\"}",
                         MediaType.APPLICATION_JSON));
-        expectValidateSucceeds(userId, "shivank");
 
         AuthService.LoginResult result = authService.login("shivank", "correct", IP, USER_AGENT);
 
@@ -116,15 +107,11 @@ class AuthServiceTest {
         assertThat(result.totpRequired()).isFalse();
         assertThat(result.sessionToken()).isEqualTo("session-token");
         verify(discordService).loginSuccess("shivank", IP);
-        verify(authEventService).logAuthEvent(userId, IP, AuthEventType.LOGIN_SUCCESS);
         server.verify();
     }
 
     @Test
     void login_validCredentials_totpEnabled_returnsTotpRequired() {
-        User user = buildUser(UUID.randomUUID(), "shivank");
-        when(userRepository.findByUsername("shivank")).thenReturn(Optional.of(user));
-
         server.expect(requestTo(BASE_URL + "/auth/login"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess(
@@ -138,7 +125,6 @@ class AuthServiceTest {
         assertThat(result.preAuthToken()).isEqualTo("totp-token");
         assertThat(result.sessionToken()).isNull();
         verify(discordService).credentialsAccepted("shivank", IP);
-        verify(authEventService).logAuthEvent(user.getId(), IP, AuthEventType.CREDENTIALS_ACCEPTED);
         server.verify();
     }
 
@@ -154,7 +140,6 @@ class AuthServiceTest {
 
         assertThat(result.success()).isFalse();
         verify(discordService).totpFailed(IP);
-        verifyNoInteractions(authEventService);
         server.verify();
     }
 
@@ -174,7 +159,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void verifyTotp_validCode_returnsSessionTokenAndLogsSuccess() {
+    void verifyTotp_validCode_returnsSessionToken() {
         UUID userId = UUID.randomUUID();
         when(userRepository.existsById(userId)).thenReturn(true);
 
@@ -190,7 +175,6 @@ class AuthServiceTest {
         assertThat(result.success()).isTrue();
         assertThat(result.sessionToken()).isEqualTo("session-token");
         verify(discordService).totpSuccess("shivank", IP);
-        verify(authEventService).logAuthEvent(userId, IP, AuthEventType.LOGIN_SUCCESS_TFA);
         server.verify();
     }
 
@@ -252,7 +236,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void logoutByUserId_callsAldropAndLogsEvent() {
+    void logoutByUserId_callsAldropAndAlerts() {
         UUID userId = UUID.randomUUID();
         User user = buildUser(userId, "shivank");
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -264,7 +248,6 @@ class AuthServiceTest {
         authService.logoutByUserId(userId, "session-token", IP);
 
         verify(discordService).logout("shivank", IP);
-        verify(authEventService).logAuthEvent(userId, IP, AuthEventType.LOGOUT);
         server.verify();
     }
 

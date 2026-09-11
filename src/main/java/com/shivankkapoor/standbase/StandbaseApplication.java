@@ -22,8 +22,6 @@ public class StandbaseApplication {
 		if (discordWebhook != null) System.setProperty("DISCORD_WEBHOOK", discordWebhook);
 		String env = dotenv.get("ENV");
 		if (env != null) System.setProperty("ENV", env);
-		String meridianBaseUrl = dotenv.get("MERIDIAN_BASE_URL");
-		if (meridianBaseUrl != null) System.setProperty("MERIDIAN_BASE_URL", meridianBaseUrl);
 		SpringApplication.run(StandbaseApplication.class, args);
 	}
 

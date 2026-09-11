@@ -6,7 +6,6 @@ import com.shivankkapoor.standbase.dto.aldrop.AldropLogoutRequestDTO;
 import com.shivankkapoor.standbase.dto.aldrop.AldropValidateSessionRequestDTO;
 import com.shivankkapoor.standbase.dto.aldrop.AldropValidateSessionResponseDTO;
 import com.shivankkapoor.standbase.dto.aldrop.AldropVerifyTotpRequestDTO;
-import com.shivankkapoor.standbase.model.AuthEventType;
 import com.shivankkapoor.standbase.model.User;
 import com.shivankkapoor.standbase.repository.UserRepository;
 import org.slf4j.Logger;
@@ -18,7 +17,6 @@ import org.springframework.web.client.RestClient;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 @Service
 public class AuthService {
@@ -27,14 +25,12 @@ public class AuthService {
     private final RestClient aldropRestClient;
     private final UserRepository userRepository;
     private final DiscordService discordService;
-    private final AuthEventService authEventService;
 
     public AuthService(RestClient aldropRestClient, UserRepository userRepository,
-                       DiscordService discordService, AuthEventService authEventService) {
+                       DiscordService discordService) {
         this.aldropRestClient = aldropRestClient;
         this.userRepository = userRepository;
         this.discordService = discordService;
-        this.authEventService = authEventService;
     }
 
     public LoginResult login(String username, String password, String ip, String userAgent) {
@@ -48,22 +44,15 @@ public class AuthService {
         } catch (HttpClientErrorException e) {
             log.warn("Login rejected by Aldrop for user {}: {}", username, e.getStatusCode());
             discordService.loginFailed(username, ip);
-            attributeLocally(username, u -> authEventService.logAuthEvent(u.getId(), ip, AuthEventType.LOGIN_FAIL));
             return LoginResult.failure();
         }
 
         if (response.token() != null) {
-            ValidatedSession session = resolveSession(response.token(), ip, userAgent);
             discordService.loginSuccess(username, ip);
-            if (session != null) {
-                authEventService.logAuthEvent(session.userId(), ip, AuthEventType.LOGIN_SUCCESS);
-            }
             return LoginResult.success(response.token());
         }
 
         discordService.credentialsAccepted(username, ip);
-        attributeLocally(username,
-                u -> authEventService.logAuthEvent(u.getId(), ip, AuthEventType.CREDENTIALS_ACCEPTED));
         return LoginResult.totpRequired(response.totpToken());
     }
 
@@ -81,10 +70,10 @@ public class AuthService {
             return VerifyTotpResult.failure();
         }
 
+        // Resolved for the username only — verify-totp carries no username of its own.
         ValidatedSession session = resolveSession(response.token(), ip, userAgent);
         if (session != null) {
             discordService.totpSuccess(session.username(), ip);
-            authEventService.logAuthEvent(session.userId(), ip, AuthEventType.LOGIN_SUCCESS_TFA);
         }
         return VerifyTotpResult.success(response.token());
     }
@@ -108,7 +97,6 @@ public class AuthService {
         }
         String username = getUsernameById(userId);
         discordService.logout(username != null ? username : "unknown", ip);
-        authEventService.logAuthEvent(userId, ip, AuthEventType.LOGOUT);
     }
 
     // Every authenticated request resolves through Aldrop — no caching, so a revoked or expired
@@ -138,12 +126,6 @@ public class AuthService {
         }
         userRepository.save(new User(userId, username, OffsetDateTime.now()));
         log.info("Provisioned local user record for Aldrop user {}", userId);
-    }
-
-    // Aldrop's login/verify-totp responses don't carry a userId on the pre-token paths (failure,
-    // or credentials-accepted-awaiting-totp), so events there are attributed via a local lookup.
-    private void attributeLocally(String username, Consumer<User> action) {
-        userRepository.findByUsername(username.toLowerCase()).ifPresent(action);
     }
 
     private <T> T post(String uri, Object body, Class<T> responseType) {
