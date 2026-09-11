@@ -8,25 +8,29 @@ The REST API for [Standbase](https://standbase.shivankkapoor.com), a personal st
 
 - **Java 25** / **Spring Boot 4.0**
 - **PostgreSQL** — with `tsvector` full-text search on entry content
-- **Spring Security** — stateless session auth via a custom filter; sessions are IP-bound
-- **TOTP (2FA)** — via `dev.samstevens.totp`; optional per user
+- **Spring Security** — stateless auth via a custom filter that delegates every login, TOTP
+  verification, and session check to [Aldrop](https://github.com/ShivankKapoor/aldrop), a
+  standalone auth microservice — see [Auth Flow](#auth-flow)
 - **Bucket4j + Caffeine** — in-memory rate limiting on auth and entry endpoints
 - **Lombok** — boilerplate reduction
 - **Cloudflare Tunnels** — public exposure; real client IP via `CF-Connecting-IP`
-- **Discord Webhooks** — auth event notifications
+- **Discord Webhooks** — login/logout/TOTP notifications
 
 ## Features
 
-- Two-step login: password → TOTP (if enabled), each step issuing a short-lived token
-- Session tokens are IP-bound — requests from a different IP are rejected
+- Two-step login: password → TOTP (if enabled), each step issuing a short-lived token, both
+  handled by Aldrop
+- Sessions are device-bound (IP + User-Agent) by Aldrop — every request is validated against it,
+  so a revoked or expired session stops working immediately
 - Per-user rate limiting on login, TOTP verification, and entry writes
-- Auth event logging (login, logout, failures) with country/city via an IP geolocation service
 - Full-text search index on entry content via PostgreSQL `tsvector` trigger
 
 ## Prerequisites
 
 - Java 25+
 - PostgreSQL (run `schema.sql` to initialise tables, indexes, and the `standbase_app` role)
+- A running [Aldrop](https://github.com/ShivankKapoor/aldrop) instance with a platform registered
+  for Standbase (see that repo's README for platform setup)
 
 ## Setup
 
@@ -38,7 +42,8 @@ Run `schema.sql` against your PostgreSQL instance as a superuser:
 psql -U postgres -d standbase -f schema.sql
 ```
 
-This creates the `users`, `entries`, `auth_events`, and `sessions` tables, all indexes, the `tsvector` trigger, and the least-privilege `standbase_app` role.
+This creates the `users`, `entries`, and `todos` tables, all indexes, the `tsvector` trigger, and
+the least-privilege `standbase_app` role.
 
 ### 2. Environment
 
@@ -52,28 +57,16 @@ DB_PASSWORD=<your_password>
 SERVER_PORT=5554
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 DISCORD_WEBHOOK=          # optional
-MERIDIAN_BASE_URL=        # IP geolocation service base URL
+ALDROP_BASE_URL=          # Aldrop instance base URL
+ALDROP_API_KEY=           # API key from the Aldrop platform registered for Standbase
 ```
 
 ### 3. Create a User
 
-There is no public registration endpoint. Use the included script to create a user directly:
-
-**Requires [uv](https://docs.astral.sh/uv/):**
-
-```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows (PowerShell)
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-```bash
-uv run create_user.py
-```
-
-`uv` manages the virtual environment automatically. The script reads your `.env`, prompts for a username and password, BCrypt-hashes the password, and inserts the user.
+There is no local registration endpoint — user accounts live entirely in Aldrop. Register the
+user against Aldrop directly (`POST /auth/register` on the Standbase platform), using the same
+id as any existing Standbase `users` row if you're migrating one. Standbase provisions its own
+local `users` row automatically the first time that Aldrop user authenticates.
 
 ### 4. Run
 
@@ -103,31 +96,45 @@ All endpoints below require `Authorization: Bearer <token>`.
 | `GET` | `/entry/{date}` | Get a single entry by date (`YYYY-MM-DD`) |
 | `POST` | `/entry` | Create or update an entry |
 | `DELETE` | `/entry/{date}` | Delete an entry by date |
+| `GET` | `/heatmap` | Word-count history for the entry heatmap |
+| `GET` | `/todos?date=` | List todos for a given date |
+| `GET` | `/todos/summary?year=&month=` | Todo completion summary for a given month |
+| `POST` | `/todos` | Create a todo |
+| `PUT` | `/todos/{id}` | Update a todo |
+| `PUT` | `/todos/reorder` | Reorder todos |
+| `DELETE` | `/todos/{id}` | Delete a todo |
 
 ## Auth Flow
 
-1. `POST /auth/login` with `{ username, password }`
-2. If the user has TOTP enabled, the response is `{ status: "totp_required", preAuthToken: "..." }` — the pre-auth token is valid for one TOTP attempt and expires quickly
+Standbase holds no passwords, TOTP secrets, or session state of its own — every step below is a
+call through to Aldrop.
+
+1. `POST /auth/login` with `{ username, password }` → Standbase forwards this to Aldrop
+2. If the user has TOTP enabled, the response is `{ status: "totp_required", preAuthToken: "..." }` — this is Aldrop's TOTP challenge token, valid for one attempt and expiring in 5 minutes
 3. `POST /auth/totp/verify` with `{ preAuthToken, totpCode }` → `{ status: "ok", sessionToken: "..." }`
 4. If TOTP is not enabled, step 1 returns the session token directly
-5. Session tokens expire after 4 hours and are bound to the originating IP
+5. Every authenticated request calls Aldrop's `/auth/validate`, which enforces the session's 4-hour
+   TTL and its IP + User-Agent device binding — Standbase does no local session storage or caching
 
 ## Project Structure
 
 ```
 src/main/java/com/shivankkapoor/standbase/
-├── config/         # SecurityConfig
-├── controller/     # AuthController, SessionController, EntryController,
-│                   # MainController, GlobalExceptionHandler
+├── config/         # SecurityConfig, AldropClientConfig
+├── controller/     # AuthController, SessionController, EntryController, TodoController,
+│                   # HeatMapController, MainController, GlobalExceptionHandler
 ├── dto/
-│   ├── request/    # LoginRequestDTO, TotpVerifyRequestDTO, CreateEntryRequestDTO
-│   └── response/   # LoginResponseDTO, CheckResponseDTO, EntryListResponseDTO,
-│                   # CreateEntryResponseDTO, EntryOverviewResponseDTO, ResponseDTO
+│   ├── request/    # LoginRequestDTO, TotpVerifyRequestDTO, CreateEntryRequestDTO,
+│   │               # CreateTodoRequestDTO, UpdateTodoRequestDTO, ReorderTodosRequestDTO
+│   ├── response/   # LoginResponseDTO, CheckResponseDTO, EntryListResponseDTO,
+│   │               # CreateEntryResponseDTO, EntryOverviewResponseDTO, HeatMapResponseDTO,
+│   │               # TodoResponseDTO, TodoSummaryResponseDTO, ResponseDTO
+│   └── aldrop/     # Request/response records for Aldrop's login, verify-totp,
+│                   # validate, and logout endpoints
 ├── filter/         # SessionAuthFilter, AuthRateLimitFilter,
 │                   # EntryRateLimitFilter, AdminRateLimitFilter
-├── model/          # User, Entry, Session, AuthEvent, DayType, AuthEventType
-├── repository/     # UserRepository, EntryRepository, SessionRepository,
-│                   # AuthEventRepository, HealthRepository
-└── service/        # AuthService, SessionService, PreAuthService, EntryService,
-                    # AuthEventService, IpService, HealthService, DiscordService
+├── model/          # User, Entry, Todo, DayType, EntryLength
+├── repository/     # UserRepository, EntryRepository, TodoRepository, HealthRepository
+└── service/        # AuthService, EntryService, TodoService, HeatMapService,
+                    # IpService, HealthService, DiscordService
 ```
