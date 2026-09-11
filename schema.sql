@@ -5,9 +5,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS users (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username     TEXT NOT NULL,
-    password     TEXT NOT NULL,
-    totp_secret  TEXT,
-    totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -56,15 +53,6 @@ CREATE TABLE IF NOT EXISTS todos (
 );
 
 CREATE INDEX IF NOT EXISTS todos_user_date_idx ON todos (user_id, entry_date, position ASC);
-
-CREATE TABLE IF NOT EXISTS sessions (
-    token      TEXT PRIMARY KEY,
-    user_id    UUID NOT NULL UNIQUE,
-    ip         TEXT NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
 
 CREATE OR REPLACE FUNCTION entries_search_vector_update() RETURNS TRIGGER AS $$
 BEGIN
