@@ -28,15 +28,15 @@ public class InvalidTokenRateLimitFilter extends OncePerRequestFilter {
     public InvalidTokenRateLimitFilter(IpService ipService) {
         this.ipService = ipService;
         this.cache = Caffeine.newBuilder()
-                .expireAfterAccess(15, TimeUnit.MINUTES)
+                .expireAfterAccess(1, TimeUnit.HOURS)
                 .build(key -> newBucket());
     }
 
     private Bucket newBucket() {
         return Bucket.builder()
                 .addLimit(Bandwidth.builder()
-                        .capacity(10)
-                        .refillGreedy(10, Duration.ofMinutes(15))
+                        .capacity(5)
+                        .refillGreedy(5, Duration.ofHours(1))
                         .build())
                 .build();
     }
