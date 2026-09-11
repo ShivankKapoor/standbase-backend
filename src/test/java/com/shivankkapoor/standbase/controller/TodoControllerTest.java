@@ -9,7 +9,7 @@ import com.shivankkapoor.standbase.dto.request.UpdateTodoRequestDTO;
 import com.shivankkapoor.standbase.dto.response.TodoSummaryResponseDTO;
 import com.shivankkapoor.standbase.model.Todo;
 import com.shivankkapoor.standbase.service.IpService;
-import com.shivankkapoor.standbase.service.SessionService;
+import com.shivankkapoor.standbase.service.AuthService;
 import com.shivankkapoor.standbase.service.TodoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ class TodoControllerTest {
 
     @MockitoBean TodoService todoService;
     @MockitoBean IpService ipService;
-    @MockitoBean SessionService sessionService;
+    @MockitoBean AuthService authService;
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID TODO_ID = UUID.randomUUID();
@@ -59,7 +59,7 @@ class TodoControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(wac).apply(springSecurity()).build();
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(sessionService.getSessionUserID(eq(TOKEN), eq("1.2.3.4"))).thenReturn(USER_ID);
+        when(authService.getSessionUserID(eq(TOKEN), eq("1.2.3.4"), any())).thenReturn(USER_ID);
     }
 
     private Todo buildTodo() {
@@ -186,7 +186,7 @@ class TodoControllerTest {
     @Test
     void updateTodo_differentUser_returns404() throws Exception {
         UUID otherUser = UUID.randomUUID();
-        when(sessionService.getSessionUserID(eq("other-token"), eq("1.2.3.4"))).thenReturn(otherUser);
+        when(authService.getSessionUserID(eq("other-token"), eq("1.2.3.4"), any())).thenReturn(otherUser);
         when(todoService.updateTodo(eq(TODO_ID), eq(otherUser), any())).thenReturn(Optional.empty());
 
         mockMvc.perform(put("/todos/" + TODO_ID)
@@ -233,7 +233,7 @@ class TodoControllerTest {
     @Test
     void deleteTodo_differentUser_returns404() throws Exception {
         UUID otherUser = UUID.randomUUID();
-        when(sessionService.getSessionUserID(eq("other-token"), eq("1.2.3.4"))).thenReturn(otherUser);
+        when(authService.getSessionUserID(eq("other-token"), eq("1.2.3.4"), any())).thenReturn(otherUser);
         when(todoService.deleteTodo(TODO_ID, otherUser)).thenReturn(false);
 
         mockMvc.perform(delete("/todos/" + TODO_ID)

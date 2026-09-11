@@ -6,7 +6,6 @@ import com.shivankkapoor.standbase.dto.request.LoginRequestDTO;
 import com.shivankkapoor.standbase.dto.request.TotpVerifyRequestDTO;
 import com.shivankkapoor.standbase.service.AuthService;
 import com.shivankkapoor.standbase.service.IpService;
-import com.shivankkapoor.standbase.service.SessionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -30,12 +29,11 @@ class AuthControllerTest {
 
     @MockitoBean AuthService authService;
     @MockitoBean IpService ipService;
-    @MockitoBean SessionService sessionService;
 
     @Test
     void login_validCredentials_returns200WithSessionToken() throws Exception {
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(authService.login(eq("shivank"), eq("pass"), eq("1.2.3.4")))
+        when(authService.login(eq("shivank"), eq("pass"), eq("1.2.3.4"), any()))
                 .thenReturn(AuthService.LoginResult.success("session-token"));
 
         LoginRequestDTO body = new LoginRequestDTO();
@@ -53,7 +51,7 @@ class AuthControllerTest {
     @Test
     void login_invalidCredentials_returns401() throws Exception {
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(authService.login(any(), any(), any())).thenReturn(AuthService.LoginResult.failure());
+        when(authService.login(any(), any(), any(), any())).thenReturn(AuthService.LoginResult.failure());
 
         LoginRequestDTO body = new LoginRequestDTO();
         body.setUsername("shivank");
@@ -66,9 +64,24 @@ class AuthControllerTest {
     }
 
     @Test
+    void login_rateLimitedByAldrop_returns429() throws Exception {
+        when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
+        when(authService.login(any(), any(), any(), any())).thenReturn(AuthService.LoginResult.tooManyAttempts());
+
+        LoginRequestDTO body = new LoginRequestDTO();
+        body.setUsername("shivank");
+        body.setPassword("pass");
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     void login_totpEnabled_returns200WithPreAuthToken() throws Exception {
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(authService.login(any(), any(), any()))
+        when(authService.login(any(), any(), any(), any()))
                 .thenReturn(AuthService.LoginResult.totpRequired("pre-auth-token"));
 
         LoginRequestDTO body = new LoginRequestDTO();
@@ -94,8 +107,8 @@ class AuthControllerTest {
     @Test
     void totpVerify_validToken_returns200WithSessionToken() throws Exception {
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(authService.verifyTotp(eq("pre-auth-token"), eq("123456"), eq("1.2.3.4")))
-                .thenReturn("session-token");
+        when(authService.verifyTotp(eq("pre-auth-token"), eq("123456"), eq("1.2.3.4"), any()))
+                .thenReturn(AuthService.VerifyTotpResult.success("session-token"));
 
         TotpVerifyRequestDTO body = new TotpVerifyRequestDTO();
         body.setPreAuthToken("pre-auth-token");
@@ -112,7 +125,7 @@ class AuthControllerTest {
     @Test
     void totpVerify_invalidToken_returns401() throws Exception {
         when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
-        when(authService.verifyTotp(any(), any(), any())).thenReturn(null);
+        when(authService.verifyTotp(any(), any(), any(), any())).thenReturn(AuthService.VerifyTotpResult.failure());
 
         TotpVerifyRequestDTO body = new TotpVerifyRequestDTO();
         body.setPreAuthToken("bad-token");
@@ -122,5 +135,21 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void totpVerify_rateLimitedByAldrop_returns429() throws Exception {
+        when(ipService.getClientIp(any())).thenReturn("1.2.3.4");
+        when(authService.verifyTotp(any(), any(), any(), any()))
+                .thenReturn(AuthService.VerifyTotpResult.tooManyAttempts());
+
+        TotpVerifyRequestDTO body = new TotpVerifyRequestDTO();
+        body.setPreAuthToken("pre-auth-token");
+        body.setTotpCode("123456");
+
+        mockMvc.perform(post("/auth/totp/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isTooManyRequests());
     }
 }

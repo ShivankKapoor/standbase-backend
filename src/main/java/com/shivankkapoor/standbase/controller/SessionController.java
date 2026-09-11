@@ -2,6 +2,7 @@ package com.shivankkapoor.standbase.controller;
 
 import com.shivankkapoor.standbase.dto.response.CheckResponseDTO;
 import com.shivankkapoor.standbase.dto.response.ResponseDTO;
+import com.shivankkapoor.standbase.filter.SessionAuthFilter;
 import com.shivankkapoor.standbase.service.AuthService;
 import com.shivankkapoor.standbase.service.IpService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,7 +36,8 @@ public class SessionController {
     @PostMapping("/logout")
     public ResponseEntity<ResponseDTO> logout(Authentication authentication, HttpServletRequest request) {
         UUID userId = (UUID) authentication.getPrincipal();
-        authService.logoutByUserId(userId, ipService.getClientIp(request));
+        String token = (String) request.getAttribute(SessionAuthFilter.SESSION_TOKEN_ATTRIBUTE);
+        authService.logoutByUserId(userId, token, ipService.getClientIp(request));
         ResponseDTO response = new ResponseDTO();
         response.setStatus("ok");
         return ResponseEntity.ok(response);

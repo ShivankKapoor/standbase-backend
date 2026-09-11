@@ -4,8 +4,8 @@ import com.shivankkapoor.standbase.filter.AdminRateLimitFilter;
 import com.shivankkapoor.standbase.filter.AuthRateLimitFilter;
 import com.shivankkapoor.standbase.filter.EntryRateLimitFilter;
 import com.shivankkapoor.standbase.filter.SessionAuthFilter;
+import com.shivankkapoor.standbase.service.AuthService;
 import com.shivankkapoor.standbase.service.IpService;
-import com.shivankkapoor.standbase.service.SessionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -18,8 +18,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -49,8 +47,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SessionAuthFilter sessionAuthFilter(SessionService sessionService, IpService ipService) {
-        return new SessionAuthFilter(sessionService, ipService);
+    public SessionAuthFilter sessionAuthFilter(AuthService authService, IpService ipService) {
+        return new SessionAuthFilter(authService, ipService);
     }
 
     @Bean
@@ -145,10 +143,5 @@ public class SecurityConfig {
             }
             return delegate.getCorsConfiguration(request);
         }
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }
