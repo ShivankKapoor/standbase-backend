@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS todos (
     entry_date  DATE NOT NULL,
     content     TEXT NOT NULL,
     completed   BOOLEAN NOT NULL DEFAULT FALSE,
+    cancelled   BOOLEAN NOT NULL DEFAULT FALSE,
     position    INTEGER NOT NULL DEFAULT 0,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
