@@ -24,6 +24,7 @@ public class Todo {
     private LocalDate entryDate;
     private String content;
     private boolean completed;
+    private boolean cancelled;
     private int position;
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

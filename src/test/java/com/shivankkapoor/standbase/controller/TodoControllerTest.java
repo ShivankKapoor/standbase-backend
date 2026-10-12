@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -30,7 +31,9 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -89,6 +92,7 @@ class TodoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("Write tests"))
                 .andExpect(jsonPath("$.completed").value(false))
+                .andExpect(jsonPath("$.cancelled").value(false))
                 .andExpect(jsonPath("$.position").value(0));
     }
 
@@ -150,6 +154,28 @@ class TodoControllerTest {
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.completed").value(true));
+    }
+
+    @Test
+    void updateTodo_cancel_returns200WithCancelledTrue() throws Exception {
+        Todo updated = buildTodo();
+        updated.setCancelled(true);
+        when(todoService.updateTodo(eq(TODO_ID), eq(USER_ID), any())).thenReturn(Optional.of(updated));
+
+        UpdateTodoRequestDTO body = new UpdateTodoRequestDTO();
+        body.setCancelled(true);
+
+        mockMvc.perform(put("/todos/" + TODO_ID)
+                        .header("Authorization", "Bearer " + TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cancelled").value(true))
+                .andExpect(jsonPath("$.completed").value(false));
+
+        ArgumentCaptor<UpdateTodoRequestDTO> captor = ArgumentCaptor.forClass(UpdateTodoRequestDTO.class);
+        verify(todoService).updateTodo(eq(TODO_ID), eq(USER_ID), captor.capture());
+        assertThat(captor.getValue().getCancelled()).isTrue();
     }
 
     @Test

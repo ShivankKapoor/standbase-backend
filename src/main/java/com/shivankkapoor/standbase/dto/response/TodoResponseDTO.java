@@ -11,5 +11,6 @@ public class TodoResponseDTO {
     private LocalDate entryDate;
     private String content;
     private boolean completed;
+    private boolean cancelled;
     private int position;
 }

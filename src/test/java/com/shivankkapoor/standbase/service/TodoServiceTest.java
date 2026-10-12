@@ -119,6 +119,49 @@ class TodoServiceTest {
     }
 
     @Test
+    void updateTodo_ownerCanCancelAndRestore() {
+        UUID id = UUID.randomUUID();
+        Todo todo = buildTodo(id, USER_ID, 0);
+        when(todoRepository.findById(id)).thenReturn(Optional.of(todo));
+        when(todoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateTodoRequestDTO cancel = new UpdateTodoRequestDTO();
+        cancel.setCancelled(true);
+        assertThat(todoService.updateTodo(id, USER_ID, cancel).get().isCancelled()).isTrue();
+
+        UpdateTodoRequestDTO restore = new UpdateTodoRequestDTO();
+        restore.setCancelled(false);
+        assertThat(todoService.updateTodo(id, USER_ID, restore).get().isCancelled()).isFalse();
+    }
+
+    @Test
+    void updateTodo_cancelledNull_leavesCancelledUnchanged() {
+        UUID id = UUID.randomUUID();
+        Todo todo = buildTodo(id, USER_ID, 0);
+        todo.setCancelled(true);
+        when(todoRepository.findById(id)).thenReturn(Optional.of(todo));
+        when(todoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateTodoRequestDTO dto = new UpdateTodoRequestDTO();
+        dto.setCompleted(true);
+
+        assertThat(todoService.updateTodo(id, USER_ID, dto).get().isCancelled()).isTrue();
+    }
+
+    @Test
+    void updateTodo_nonOwnerCannotCancel() {
+        UUID id = UUID.randomUUID();
+        Todo todo = buildTodo(id, UUID.randomUUID(), 0);
+        when(todoRepository.findById(id)).thenReturn(Optional.of(todo));
+
+        UpdateTodoRequestDTO dto = new UpdateTodoRequestDTO();
+        dto.setCancelled(true);
+
+        assertThat(todoService.updateTodo(id, USER_ID, dto)).isEmpty();
+        assertThat(todo.isCancelled()).isFalse();
+    }
+
+    @Test
     void updateTodo_nullFieldsAreIgnored() {
         UUID id = UUID.randomUUID();
         Todo todo = buildTodo(id, USER_ID, 0);
@@ -302,6 +345,45 @@ class TodoServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).isAllCompleted()).isFalse();
+    }
+
+    @Test
+    void getTodoSummary_allCompleted_whenRemainingTodosAreCancelled() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        Todo t1 = buildTodo(UUID.randomUUID(), USER_ID, 0);
+        Todo t2 = buildTodo(UUID.randomUUID(), USER_ID, 1);
+        t1.setCompleted(true);
+        t2.setCancelled(true);
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of(t1, t2));
+
+        List<TodoSummaryResponseDTO> result = todoService.getTodoSummary(USER_ID, from, to);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).isAllCompleted()).isTrue();
+    }
+
+    @Test
+    void getTodoSummary_allCompleted_whenEveryTodoIsCancelled() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        Todo t1 = buildTodo(UUID.randomUUID(), USER_ID, 0);
+        t1.setCancelled(true);
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of(t1));
+
+        assertThat(todoService.getTodoSummary(USER_ID, from, to).get(0).isAllCompleted()).isTrue();
+    }
+
+    @Test
+    void getTodoSummary_notAllCompleted_whenActiveTodoIsIncompleteAlongsideCancelled() {
+        LocalDate from = LocalDate.of(2026, 5, 1);
+        LocalDate to = LocalDate.of(2026, 5, 31);
+        Todo t1 = buildTodo(UUID.randomUUID(), USER_ID, 0);
+        Todo t2 = buildTodo(UUID.randomUUID(), USER_ID, 1);
+        t1.setCancelled(true);
+        when(todoRepository.findByUserIdAndEntryDateBetween(USER_ID, from, to)).thenReturn(List.of(t1, t2));
+
+        assertThat(todoService.getTodoSummary(USER_ID, from, to).get(0).isAllCompleted()).isFalse();
     }
 
     @Test

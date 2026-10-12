@@ -11,6 +11,7 @@ public class UpdateTodoRequestDTO {
     @Size(max = 500)
     private String content;
     private Boolean completed;
+    private Boolean cancelled;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate entryDate;
 }

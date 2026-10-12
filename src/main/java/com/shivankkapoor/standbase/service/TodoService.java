@@ -45,6 +45,7 @@ public class TodoService {
                 .map(todo -> {
                     if (dto.getContent() != null) todo.setContent(dto.getContent());
                     if (dto.getCompleted() != null) todo.setCompleted(dto.getCompleted());
+                    if (dto.getCancelled() != null) todo.setCancelled(dto.getCancelled());
                     if (dto.getEntryDate() != null){
                         todo.setEntryDate(dto.getEntryDate());
                         int count = todoRepository.findByUserIdAndEntryDateOrderByPositionAscCreatedAtAsc(userId, dto.getEntryDate()).size();
@@ -70,7 +71,7 @@ public class TodoService {
                 .map(e -> {
                     TodoSummaryResponseDTO dto = new TodoSummaryResponseDTO();
                     dto.setDate(e.getKey());
-                    dto.setAllCompleted(e.getValue().stream().allMatch(Todo::isCompleted));
+                    dto.setAllCompleted(e.getValue().stream().allMatch(t -> t.isCompleted() || t.isCancelled()));
                     return dto;
                 })
                 .sorted(Comparator.comparing(TodoSummaryResponseDTO::getDate))

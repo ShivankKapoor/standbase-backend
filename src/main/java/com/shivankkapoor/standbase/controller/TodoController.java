@@ -75,6 +75,7 @@ public class TodoController {
         response.setEntryDate(todo.getEntryDate());
         response.setContent(todo.getContent());
         response.setCompleted(todo.isCompleted());
+        response.setCancelled(todo.isCancelled());
         response.setPosition(todo.getPosition());
         return response;
     }
