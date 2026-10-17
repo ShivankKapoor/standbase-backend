@@ -11,6 +11,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -19,6 +22,13 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class EntryRateLimitFilter extends OncePerRequestFilter {
+
+    // Matched on the decoded path like Spring Security does, so /%65ntry can't skip the limit.
+    // "/x/**" also matches "/x" itself.
+    private static final RequestMatcher LIMITED_PATHS = new OrRequestMatcher(
+            PathPatternRequestMatcher.withDefaults().matcher("/entry/**"),
+            PathPatternRequestMatcher.withDefaults().matcher("/session/**"),
+            PathPatternRequestMatcher.withDefaults().matcher("/heatmap/**"));
 
     private final LoadingCache<UUID, Bucket> cache;
 
@@ -39,8 +49,7 @@ public class EntryRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        return !uri.startsWith("/entry") && !uri.startsWith("/session") && !uri.startsWith("/heatmap");
+        return !LIMITED_PATHS.matches(request);
     }
 
     @Override

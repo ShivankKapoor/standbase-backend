@@ -11,6 +11,10 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -18,6 +22,12 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public class AuthRateLimitFilter extends OncePerRequestFilter {
+
+    // Matched the way Spring Security and MVC read the path (decoded), not as the raw URI, so an
+    // encoded path like /auth/%6cogin can't reach the login endpoint while skipping this limit.
+    private static final RequestMatcher LOGIN_ENDPOINTS = new OrRequestMatcher(
+            PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/auth/login"),
+            PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/auth/totp/verify"));
 
     private final IpService ipService;
     private final LoadingCache<String, Bucket> cache;
@@ -40,9 +50,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        if (!request.getMethod().equals("POST")) return true;
-        String uri = request.getRequestURI();
-        return !uri.equals("/auth/login") && !uri.equals("/auth/totp/verify");
+        return !LOGIN_ENDPOINTS.matches(request);
     }
 
     @Override
