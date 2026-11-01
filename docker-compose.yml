@@ -1,0 +1,16 @@
+services:
+  standbase-backend:
+    build: .
+    image: standbase-backend
+    container_name: standbase-backend
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "5554:5554"
+    volumes:
+      - ./.env:/deployments/.env:ro,Z
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "10"
