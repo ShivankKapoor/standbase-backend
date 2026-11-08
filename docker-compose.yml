@@ -4,6 +4,9 @@ services:
     image: standbase-backend
     container_name: standbase-backend
     restart: unless-stopped
+    dns:
+      - 9.9.9.9
+      - 1.1.1.1
     env_file: .env
     ports:
       - "5554:5554"
