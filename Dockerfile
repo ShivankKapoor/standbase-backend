@@ -16,6 +16,8 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM docker.io/library/ibm-semeru-runtimes:open-25-jre AS runner
 WORKDIR /deployments
 
+USER 185
+
 COPY --from=builder --chown=185:root /build/build/libs/*-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
