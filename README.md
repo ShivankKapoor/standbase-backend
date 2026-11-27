@@ -24,7 +24,7 @@ The REST API for [Standbase](https://standbase.shivankkapoor.com), a personal st
   handled by Aldrop
 - Sessions are device-bound (IP + User-Agent) by Aldrop — every request is validated against it,
   so a revoked or expired session stops working immediately
-- Daily entries (one per user per date) with an optional day type: `PTO`, `PLANNING`, or `SUPPORT`
+- Daily entries (one per user per date) with an optional day type: `PTO`, `PLANNING`, `SUPPORT`, or `MISSED`
 - Per-date todos with completed/cancelled states and manual ordering
 - Word-count history for the stats heatmap (past year)
 - Word count stored as a generated column in PostgreSQL
