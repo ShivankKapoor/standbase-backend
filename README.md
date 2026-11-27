@@ -130,7 +130,7 @@ All endpoints below require `Authorization: Bearer <token>`.
 | `GET` | `/entry/{date}` | Get a single entry by date (`YYYY-MM-DD`); `404` if none |
 | `POST` | `/entry` | Create or update the entry for `date` — `{ date, content, dayType }` |
 | `DELETE` | `/entry/{date}` | Delete an entry by date (`204`, or `404` if none) |
-| `GET` | `/heatmap?today=` | Word counts for each entry in the year up to `today` (`YYYY-MM-DD`), plus the average words per entry |
+| `GET` | `/heatmap?today=` | Word count and day type for each entry in the year up to `today` (`YYYY-MM-DD`), plus the average words per entry |
 | `GET` | `/todos?date=` | List todos for a date, ordered by position |
 | `GET` | `/todos/summary?year=&month=` | Per date in the month that has todos: `{ date, allCompleted }` (completed or cancelled counts as done) |
 | `POST` | `/todos` | Create a todo — `{ entryDate, content }`; appended at the end of that date's list |

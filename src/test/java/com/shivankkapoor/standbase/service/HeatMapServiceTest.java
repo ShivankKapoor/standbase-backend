@@ -45,22 +45,22 @@ class HeatMapServiceTest {
 
     @Test
     void getHeatMap_singleEntry_averageEqualsThatEntrysWordCount() {
-        List<EntryLength> entries = List.of(new EntryLength(TODAY, 250));
+        List<EntryLength> entries = List.of(new EntryLength(TODAY, 250, null));
         when(entryRepository.findWordCountsByUserIdAndEntryDateBetween(eq(USER_ID), any(), any()))
                 .thenReturn(entries);
 
         HeatMapResponseDTO result = heatMapService.getHeatMap(USER_ID, TODAY);
 
         assertThat(result.getAverage()).isEqualTo(250);
-        assertThat(result.getEntries()).containsExactly(new EntryLength(TODAY, 250));
+        assertThat(result.getEntries()).containsExactly(new EntryLength(TODAY, 250, null));
     }
 
     @Test
     void getHeatMap_multipleEntries_computesIntegerAverage() {
         List<EntryLength> entries = List.of(
-                new EntryLength(TODAY.minusDays(2), 100),
-                new EntryLength(TODAY.minusDays(1), 200),
-                new EntryLength(TODAY, 210)
+                new EntryLength(TODAY.minusDays(2), 100, null),
+                new EntryLength(TODAY.minusDays(1), 200, null),
+                new EntryLength(TODAY, 210, null)
         );
         when(entryRepository.findWordCountsByUserIdAndEntryDateBetween(eq(USER_ID), any(), any()))
                 .thenReturn(entries);
@@ -75,8 +75,8 @@ class HeatMapServiceTest {
     @Test
     void getHeatMap_averageTruncatesTowardZero_doesNotRound() {
         List<EntryLength> entries = List.of(
-                new EntryLength(TODAY.minusDays(1), 10),
-                new EntryLength(TODAY, 1)
+                new EntryLength(TODAY.minusDays(1), 10, null),
+                new EntryLength(TODAY, 1, null)
         );
         when(entryRepository.findWordCountsByUserIdAndEntryDateBetween(eq(USER_ID), any(), any()))
                 .thenReturn(entries);
