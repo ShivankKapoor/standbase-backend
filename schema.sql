@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS entries (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL REFERENCES users(id),
     entry_date   DATE NOT NULL,
-    day_type     TEXT CHECK (day_type IN ('PTO', 'PLANNING', 'SUPPORT')),
+    day_type     TEXT CHECK (day_type IN ('PTO', 'PLANNING', 'SUPPORT', 'MISSED')),
     content      TEXT,
     word_count   INTEGER GENERATED ALWAYS AS (
         CASE WHEN content IS NULL OR trim(content) = '' THEN 0

@@ -55,7 +55,7 @@ class HeatMapControllerTest {
     private HeatMapResponseDTO buildResponse() {
         HeatMapResponseDTO dto = new HeatMapResponseDTO();
         dto.setAverage(150);
-        dto.setEntries(List.of(new EntryLength(TODAY, 150)));
+        dto.setEntries(List.of(new EntryLength(TODAY, 150, null)));
         return dto;
     }
 

@@ -18,7 +18,7 @@ public interface EntryRepository extends CrudRepository<Entry, UUID> {
     List<Entry> findByUserIdAndEntryDateBetweenOrderByEntryDateDesc(UUID userId, LocalDate from, LocalDate to);
     int deleteByUserIdAndEntryDate(UUID userId, LocalDate entryDate);
 
-    @Query(value = "SELECT entry_date AS entryDate, word_count AS wordCount " +
+    @Query(value = "SELECT entry_date AS entryDate, word_count AS wordCount, day_type AS dayType " +
             "FROM entries WHERE user_id = :userId AND entry_date BETWEEN :from AND :to " +
             "ORDER BY entry_date", nativeQuery = true)
     List<EntryLength> findWordCountsByUserIdAndEntryDateBetween(
