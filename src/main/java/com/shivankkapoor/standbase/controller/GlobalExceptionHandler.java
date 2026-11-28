@@ -1,5 +1,6 @@
 package com.shivankkapoor.standbase.controller;
 
+import com.shivankkapoor.standbase.service.InvalidCreditDayException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +26,11 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors()
                 .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(errors);
+    }
+
+    @ExceptionHandler(InvalidCreditDayException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidCreditDay(InvalidCreditDayException ex) {
+        return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
