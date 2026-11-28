@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS todos (
 
 CREATE INDEX IF NOT EXISTS todos_user_date_idx ON todos (user_id, entry_date, position ASC);
 
+CREATE TABLE IF NOT EXISTS credit_days (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    entry_date    DATE NOT NULL,
+    month_total   NUMERIC(10,2) CHECK (month_total >= 0),  -- NULL if nothing logged
+    did_not_work  BOOLEAN NOT NULL DEFAULT FALSE,
+    UNIQUE (user_id, entry_date)
+);
+
 CREATE OR REPLACE FUNCTION entries_search_vector_update() RETURNS TRIGGER AS $$
 BEGIN
     NEW.search_vector := to_tsvector('english', COALESCE(NEW.content, ''));
