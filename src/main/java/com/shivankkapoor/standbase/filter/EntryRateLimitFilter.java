@@ -28,7 +28,9 @@ public class EntryRateLimitFilter extends OncePerRequestFilter {
     private static final RequestMatcher LIMITED_PATHS = new OrRequestMatcher(
             PathPatternRequestMatcher.withDefaults().matcher("/entry/**"),
             PathPatternRequestMatcher.withDefaults().matcher("/session/**"),
-            PathPatternRequestMatcher.withDefaults().matcher("/heatmap/**"));
+            PathPatternRequestMatcher.withDefaults().matcher("/heatmap/**"),
+            PathPatternRequestMatcher.withDefaults().matcher("/todos/**"),
+            PathPatternRequestMatcher.withDefaults().matcher("/credits/**"));
 
     private final LoadingCache<UUID, Bucket> cache;
 

@@ -48,14 +48,25 @@ class EntryRateLimitFilterTest {
     // Percent-encoded forms route to the same controllers, so they must share the limit
     @ParameterizedTest
     @ValueSource(strings = {"/entry", "/entry/2026-01-01", "/%65ntry", "/session/check", "/%73ession/check",
-            "/heatmap", "/%68eatmap"})
+            "/heatmap", "/%68eatmap",
+            "/todos", "/todos/summary", "/%74odos", "/credits", "/credits/2026-01-01", "/%63redits"})
     void limitsHoweverThePathIsEncoded(String uri) throws Exception {
         assertThat(blockedOutOf35(uri)).isEqualTo(5);
     }
 
     @Test
+    void allPathsShareOneBudget() throws Exception {
+        for (String uri : List.of("/entry", "/todos", "/credits")) {
+            for (int i = 0; i < 10; i++) {
+                filter.doFilter(new MockHttpServletRequest("GET", uri), new MockHttpServletResponse(), new MockFilterChain());
+            }
+        }
+        assertThat(blockedOutOf35("/heatmap")).isEqualTo(35);
+    }
+
+    @Test
     void ignoresOtherPaths() throws Exception {
-        assertThat(blockedOutOf35("/todos")).isZero();
+        assertThat(blockedOutOf35("/health")).isZero();
         assertThat(blockedOutOf35("/entryx")).isZero();
     }
 }
