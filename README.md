@@ -27,8 +27,10 @@ The REST API for [Standbase](https://standbase.shivankkapoor.com), a personal st
 - Daily entries (one per user per date) with an optional day type: `PTO`, `PLANNING`, `SUPPORT`, or `MISSED`
 - Per-date todos with completed/cancelled states and manual ordering
 - Word-count history for the stats heatmap (past year)
+- AI credit tracking: log the month-to-date total per day and get daily usage and the average per
+  worked day (see [Credit Counting](#credit-counting))
 - Word count stored as a generated column in PostgreSQL
-- Rate limiting on login/TOTP, invalid session tokens, and entry/session/heatmap requests
+- Rate limiting on login/TOTP, invalid session tokens, and entry/session/heatmap/todo/credit requests
 
 ## Prerequisites
 
@@ -48,7 +50,7 @@ against your PostgreSQL instance as a superuser:
 psql -U postgres -d standbase -f schema.sql
 ```
 
-This creates the `users`, `entries`, and `todos` tables, all indexes, the `tsvector` trigger, and
+This creates the `users`, `entries`, `todos`, and `credit_days` tables, all indexes, the `tsvector` trigger, and
 the least-privilege `standbase_app` role (CRUD only; no schema changes). Hibernate runs with
 `ddl-auto=validate`, so the schema must already exist.
 
@@ -137,8 +139,18 @@ All endpoints below require `Authorization: Bearer <token>`.
 | `PUT` | `/todos/{id}` | Partial update of `content`, `completed`, `cancelled`, or `entryDate` (changing the date moves the todo to the end of the new date's list) |
 | `PUT` | `/todos/reorder` | Reorder todos — `{ ids: [...] }` in the desired order |
 | `DELETE` | `/todos/{id}` | Delete a todo (`204`, or `404` if not yours / missing) |
+| `GET` | `/credits?year=&month=` | `{ used, workedDays, average, days: [{ date, monthTotal, didNotWork, used }] }` for a month |
+| `PUT` | `/credits/{date}` | Set a day's `{ monthTotal, didNotWork }` (not both); `null` and `false` clears it. Returns the updated month. `400` if the total is out of order with other days |
 
 Entries and todos are always scoped to the authenticated user.
+
+## Credit Counting
+
+Totals are month-to-date, so a day's usage is its total minus the previous logged total that month.
+The average is the latest total divided by the worked days from the 1st to that day:
+
+- Weekdays count unless marked "didn't work" or `PTO` (a `PTO` day still counts if credits were used)
+- Weekends count only if a total was logged
 
 ## Auth Flow
 
@@ -161,9 +173,9 @@ All limits are in-memory (per instance) and reset on restart.
 |--------|------------|-----|-------|
 | `AuthRateLimitFilter` | `POST /auth/login`, `POST /auth/totp/verify` | client IP | 10 failed (`401`) attempts per 15 minutes |
 | `InvalidTokenRateLimitFilter` | any request with a Bearer token | client IP | 5 rejected tokens per hour, so bad tokens can't be used to hammer Aldrop |
-| `EntryRateLimitFilter` | `/entry/**`, `/session/**`, `/heatmap/**` | user | 30 requests per minute |
+| `EntryRateLimitFilter` | `/entry/**`, `/session/**`, `/heatmap/**`, `/todos/**`, `/credits/**` | user | 30 requests per minute, shared across all of them |
 
-Exceeded limits return `429` with a `Retry-After` header. `/todos` is not rate limited by Standbase.
+Exceeded limits return `429` with a `Retry-After` header.
 
 ## Project Structure
 
@@ -171,7 +183,7 @@ Exceeded limits return `429` with a `Retry-After` header. `/todos` is not rate l
 src/main/java/com/shivankkapoor/standbase/
 ├── config/         # SecurityConfig, AldropClientConfig
 ├── controller/     # AuthController, SessionController, EntryController, TodoController,
-│                   # HeatMapController, MainController, GlobalExceptionHandler
+│                   # CreditController, HeatMapController, MainController, GlobalExceptionHandler
 ├── dto/
 │   ├── request/    # LoginRequestDTO, TotpVerifyRequestDTO, CreateEntryRequestDTO,
 │   │               # CreateTodoRequestDTO, UpdateTodoRequestDTO, ReorderTodosRequestDTO
@@ -182,8 +194,10 @@ src/main/java/com/shivankkapoor/standbase/
 │                   # validate, and logout endpoints
 ├── filter/         # SessionAuthFilter, AuthRateLimitFilter, InvalidTokenRateLimitFilter,
 │                   # EntryRateLimitFilter
-├── model/          # User, Entry, Todo, DayType, EntryLength
-├── repository/     # UserRepository, EntryRepository, TodoRepository, HealthRepository
-└── service/        # AuthService, EntryService, TodoService, HeatMapService,
+├── model/          # User, Entry, Todo, CreditDay, DayType, EntryLength
+├── repository/     # UserRepository, EntryRepository, TodoRepository, CreditDayRepository,
+│                   # HealthRepository
+└── service/        # AuthService, EntryService, TodoService, CreditService,
+                    # HeatMapService,
                     # IpService, HealthService, DiscordService
 ```
